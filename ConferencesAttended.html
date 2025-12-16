@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nick Christo's Homepage</title>
+    <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Merriweather', serif; /* Use Merriweather serif font */
+            background-color: #d1b9e8; /* Light muted purple */
+            margin: 0;
+            padding: 0;
+            color: #333;
+        }
+        header {
+            background-color: #422e69; /* Slightly darker muted purple */
+            padding: 20px;
+            position: fixed; /* Make header fixed */
+            top: 0;
+            left: 0;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+	.header-link {
+    display: flex;
+    align-items: center;
+    text-decoration: none; /* Remove underline from link */
+    color: #FFDAB9; /* Color of the text */
+}
+
+.header-link img {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid #ffffff;
+}
+
+.header-link h1 {
+    margin: 0;
+    margin-left: 20px; /* Space between the image and text */
+    font-weight: 700;
+}
+        header img {
+            width: 80px; /* Adjust the size as needed */
+            height: 80px; /* Adjust the size as needed */
+            border-radius: 50%;
+            object-fit: cover;
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            border: 3px solid #ffffff; /* Optional: Add a border to the image */
+        }
+        header h1 {
+            margin: 0;
+            color: #FFDAB9; /* Peach, can use white: FFFFFF */
+            font-weight: 700;
+        }
+        nav {
+            text-align: center;
+            margin: 100px 0 20px 0; /* Adjusted margin to avoid overlap with fixed header */
+        }
+        nav a {
+            text-decoration: none;
+            color: #4a2a6a;
+            padding: 0 15px;
+            font-weight: 700; /* Bold modern look */
+        }
+        .hero-image-container {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        .hero-image {
+            width: 80%; /* Adjust width as necessary */
+            max-width: 800px; /* Limit max width */
+            height: auto;
+            object-fit: cover;
+        }
+	.divider {
+    		border: 0;
+    		border-top: 1px solid #422e69; /* geo purple line */
+    		margin: 20px 0; /* Space above and below the line */
+	}
+        section {
+            padding: 20px;
+            margin: 10px;
+            background-color: #ffffff;
+            border-radius: 8px;
+        }
+        .welcome {
+            padding: 20px;
+        }
+
+        footer {
+            text-align: center;
+            padding: 10px;
+            background-color: #d1b9e8;
+            color: #4a2a6a;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+    <a href="#top" class="header-link">
+        <img src="Images/CircleHotdog.png" alt="CircDog">
+        <h1>Nick Christo's Homepage</h1>
+    </a>
+	</header>
+
+    <nav>
+        <a href="#Go back to homepage">Homepage</a>
+        <a href="#Conferences Attended">Conferences Attended</a>
+    </nav>
+    
+    <section id="Go back to homepage">
+        <h2><a href="index.html"> Go back to homepage </a> </h2>
+        <p>Maybe we have met before. Below is an incomplete list of conferences I've been to.</p>
+    </section>
+	
+	<section id="Conferences Attended">
+		<h2> 2025 </h2>
+		<h3> Please note that this list is incomplete. </h3>
+		<ul>
+		<li> <a href="https://www.dmg.tuwien.ac.at/rsa2025/">The 22nd International Conference on Random Structures and Algorithms (RS&amp;A</a>, August 4-8, 2025, Vienna, Austria
+	</li>
+		<li> <a href="https://www.slmath.org/summer-schools/1099">SLMATH Local Limits of Random Graphs </a>, June 2-13, 2025, Paris-Saclay University
+	</li>
+ 
+		<li> <a href="https://sites.google.com/usc.edu/gscc-2025/home?authuser=0">GSCC (Graduate Student Combinatorics Conference 2025 </a> , March 15-17, 2025, USC </li>
+		<li> <a href="https://www.marcusmichelen.org/LakeMichiganWorkshop2025.php">10th Lake Michigan Combinatorics Conference </a> , April 5-6, 2025, UIC
+ </li>
+		</ul>
+		<h2> 2024 <</h2>
+		<ul>
+		<li> <a href="https://ssp2024.rice.edu/">SSP (Seminar on Stochastic Processes) </a>, March 13-16, 2024, Rice University </li>
+		<li> <a href="https://sites.google.com/wmich.edu/dudek/9th-lake-michigan-workshop?authuser=0">9th Lake Michigan Combinatorics Conference </a>, April 13-14, 2024, WMU </li>
+		<li> <a href="https://sites.gatech.edu/probschool2024/">Probability, Algorithms, and Inference </a>, May 13-16, 2024, GATech </li>
+		<li> <a href="https://www.slmath.org/summer-schools/1063">SLMATH Mathematical Spin Glass Theory </a>, August 5-16, Courant Institute, NYU
+ </li>
+		<li> <a href="https://www.math.northwestern.edu/activities/past-conferences/midwest-probability-colloquium.html">45th Midwest Probability Colloquium </a>, October 10-12, 2024, Northwestern
+ </li>
+		</ul>
+		
+		<h2> 2023 </h2>
+		<ul>
+		<li> <a href="https://sites.nd.edu/lmw8-2023/">8th Lake Michigan Combinatorics Conference </a>, May 13-14, 2023, Notre Dame
+ </li>
+		<li> Graduate Mini-School in Groups, Dynamics, and Probability, May 30-June 3, 2023, UT-Austin </li>
+		<li> <a href="https://rsa.math.cmu.edu/RSA2023/">21st RS&amp;A (Random Structures &amp; Algorithms) </a>, June 12-16, 2023, CMU 
+		<ul> <li> Random Run Participant </li> </ul> </li>
+		<li> 44th Midwest Probability Colloquium, October 12-14, 2023, Northwestern </li>
+		<li> <a href="https://probability.commons.gc.cuny.edu/22nd-northeast-probability-seminar/">(NEPS) Northeastern Probability Seminar </a>, November 16-17, 2023,  NYU
+ </li>
+		</ul>
+		
+		<h2> 2022 </h2>
+		<ul>
+		<li> <a href="https://willp.people.uic.edu/lakemichigan2022/">7th Lake Michigan Combinatorics Conference, </a>  May 14-15, 2022, UIC
+ </li>
+		<li> <a href="https://cornell.app.box.com/s/hcs7vuw9wpj1101wqah2dpoh7ul8uzl1">Cornell Probability Summer School </a>, July 25-August 5, 2022, Cornell University
+ </li>
+		<li> 43rd Midwest Probability Colloquium, October 20-22, 2022, Northwestern </li>
+		</ul>
+		
+		<h2> 2021 or prior </h2>
+		<li> <a href="https://willperkins.org/frontiers2021.html"> Fronteirs of Statistical Mechanics and Theoretical Computer Science</a> , Dec 13-15, 2021, UIC
+ </li>
+		<li> 5th Lake Michigan Combinatorics Conference, 2018, WMU </li>
+
+	</section>	
+
+
+    <footer>
+        <p>&copy; 2024 Nick Christo. All rights reserved.</p>
+    </footer>
+
+</body>
+</html>
