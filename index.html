@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nick Christo's Homepage</title>
+    <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Merriweather', serif; /* Use Merriweather serif font */
+            background-color: #d1b9e8; /* Light muted purple */
+            margin: 0;
+            padding: 0;
+            color: #333;
+        }
+        header {
+            background-color: #422e69; /* Slightly darker muted purple */
+            padding: 20px;
+            position: fixed; /* Make header fixed */
+            top: 0;
+            left: 0;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+	.header-link {
+    display: flex;
+    align-items: center;
+    text-decoration: none; /* Remove underline from link */
+    color: #FFDAB9; /* Color of the text */
+}
+
+.header-link img {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid #ffffff;
+}
+
+.header-link h1 {
+    margin: 0;
+    margin-left: 20px; /* Space between the image and text */
+    font-weight: 700;
+}
+        header img {
+            width: 80px; /* Adjust the size as needed */
+            height: 80px; /* Adjust the size as needed */
+            border-radius: 50%;
+            object-fit: cover;
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            border: 3px solid #ffffff; /* Optional: Add a border to the image */
+        }
+        header h1 {
+            margin: 0;
+            color: #FFDAB9; /* Peach, can use white: FFFFFF */
+            font-weight: 700;
+        }
+        nav {
+            text-align: center;
+            margin: 100px 0 20px 0; /* Adjusted margin to avoid overlap with fixed header */
+        }
+        nav a {
+            text-decoration: none;
+            color: #4a2a6a;
+            padding: 0 15px;
+            font-weight: 700; /* Bold modern look */
+        }
+        .hero-image-container {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        .hero-image {
+            width: 80%; /* Adjust width as necessary */
+            max-width: 800px; /* Limit max width */
+            height: auto;
+            object-fit: cover;
+        }
+	.divider {
+    		border: 0;
+    		border-top: 1px solid #422e69; /* geo purple line */
+    		margin: 20px 0; /* Space above and below the line */
+	}
+        section {
+            padding: 20px;
+            margin: 10px;
+            background-color: #ffffff;
+            border-radius: 8px;
+        }
+        .welcome {
+            padding: 20px;
+        }
+
+        footer {
+            text-align: center;
+            padding: 10px;
+            background-color: #d1b9e8;
+            color: #4a2a6a;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+    <a href="#top" class="header-link">
+        <img src="Images/CircleHotdog.png" alt="CircDog">
+        <h1>Nick Christo's Homepage</h1>
+    </a>
+	</header>
+
+    
+    <nav>
+        <a href="#teaching">Teaching</a>
+        <a href="#research">Research</a>
+        <a href="#talks">Invited Talks</a>
+        <a href="#about">About Me</a>
+		<a href="#Things I do">Things I do </a>
+    </nav>
+
+    <!-- Hero Image Section -->
+    <center>
+	<img src="Images/hotdog.jpg" alt="Hotdog" title="hotdog"	height="262" width="440" class="hero-image">
+	</center>
+    <section id="welcome" class="welcome">
+        <h2>Quick Things</h2>
+        <p> PhD Candidate at the University of Illinois Chicago <br>
+			Email: 5christN@uic.edu (swap the "5" and the "N") <br>
+			Office: SEO 724	<br>
+			<a href="files/Christo_CV.pdf" <b> CV </b> </a>
+    </section>
+
+    <section id="teaching">
+    <h2>Teaching</h2>
+	<h3> Current Teaching </h3>
+		<p> Spring 2026: </p>
+		<p> <ul>
+				<li> Instructor of Record: STAT 361 - Elements of Statistical Elements </li>
+				<li> TBD </li>
+					</ul>	</p>
+		<p> Fall 2025 Office Hours: Math 180 11-1 T at <a href="https://mslc.uic.edu/"> MSLC </a> <b>&emsp; Stat 101 11-1 T, but also R and F by appt. </b> </P>
+    <hr class="divider">
+
+
+    <h3>Past Teaching</h3>
+    <ul> 
+		<li> <b> Visiting Lecturer </b> - Fall 2025: Calculus I (Math 180: one section online and one section in-person) and Introduction to Statistics (Stat 101: one section). </li>
+		<li> <b> Lead Instructor </b> for <a href="https://sites.google.com/view/yspatuic/"> YSP at UIC </a>. - Summers 2025, 2024, 2023, 2022. </li>
+		<li> <b> Graduate Instructor </b>  <a href="https://today.uic.edu/young-scholars-program-lets-high-school-students-explore-math-stem-topics/"> YSP at UIC </a> - Summer 2021. </li>
+		<li> <b> Teaching Assistant Coordinator (TAC) </b> for Math 589: Teaching of Mathematics - Fall 2024. This is a required course for teaching assistants in the MSCS department to aid in developing teaching skills and methods. </li>
+		<li> <b> Instructor of Record </b> <ul>
+												<li> Math 294: Emerging Scholar Program (ESP) for Math 215: Intro to Adv Mathematics - Spring 2025. </li>
+												<li> Math 179: ESP for Math 180: Calculus I - Spring (S) 2024, Fall (F) 2023, S23, F22, S22.  </li>
+												<li> Math 178: a pilot "Catch course" for Calculus I - Fall 2023. </li>
+											</ul>	
+		<li> Assistant on ADA/Accessibility Project - Fall 2024 - Spring 2025. Over the year, investigated ways making teaching and mathematical documents accessible and converting already existing documents
+into ones that were accessible. Creating both templates to use and short guides. 
+		<li> <b> Teaching Assistant </b> <ul>
+												<li> Math 180: Calculus I - Springs 2025, 2024, Fall 2023, S23, F22, S22, F21, S21. </li>
+												<li> Math 121: Precalculus - Fall 2020. </li>
+												<li> LAS 110: Experience UIC (course for incoming first year LAS undergraduates. <!-- T at 9:30-10:20, 11-11:50 am -->. </li>
+										</ul>
+		<li> <b> Grader </b>: MCS 401: Algorithms I - Summers 2024, 2023, 2022. </li>
+	</ul>
+</section>
+
+    <section id="research">
+        <h2>Research</h2>
+        <p>My research interests are encompassed by the areas of Probability, Combinatorics, Statistical Physics, and Theoretical Computer Science. Below are any papers I've worked on.</p>
+	<p> 2. <b> Realizability of hypergraphs and high-dimensional contingency tables with random degrees and marginals </b> <br>
+			<span style="text-indent: 20px; display: inline-block;"> <a href="https://arxiv.org/abs/2408.11116/"> Revisions submitted to IMRN. </a> </span> <br>
+			<span style="text-indent: 20px; display: inline-block;"> with Marcus Michelen </span>
+	</p>
+
+	<p> 1. <b> The set of ratios of derangements to permutations in digraphs is dense in [0,1/2]. </b> <br>
+			<span style="text-indent: 20px; display: inline-block;"><a href="https://www.combinatorics.org/ojs/index.php/eljc/article/view/v29i1p8/">  The Electronic Journal of Combinatorics </a> (2022)  </span> <br>
+			<span style="text-indent: 20px; display: inline-block;"> with Bethany Austhof and Patrick Bennett </span>
+	</p>
+    </section>
+
+    <section id="talks">
+        <h2>Invited Talks</h2>
+	<ul>
+		<li> Probability Seminar on November 12, 2024 at Northwestern University. </li>
+		<li> Combinatorics and Probability Seminar on October 2, 2024 at UIC. </li>
+		<li> <p> <a href="https://www.ideal-institute.org/2025/09/09/2025-ideal-get-ready-for-research-workshop/"> IDEAL Get Ready for Research Workshop </a> on November 8-10, 2025.   <a href="files/IDEAL_Get_Ready_for_Research.pdf" style="color:white" > Slides used for talk. </a> </p> </li>
+		<li> <p> <a href="https://www.ideal-institute.org/2023/01/06/2023-ideal-get-ready-for-reasearch-workshop/"> IDEAL Get Ready for Research Workshop </a> on June 2-4 2023 at UIC. </p> </li>
+		<li> <p> <a href="https://www.ideal-institute.org/2023/04/05/ideal-high-school-teacher-workshop/"> IDEAL High School Teacher Workshop </a> on May 6, 2023 at UIC. </p> </li>
+		<h3> Accepted Talks </h3>
+		<li> <p> <a href="https://rsa2025.conf.tuwien.ac.at/"> RS&amp;A 2025 (Random Structures &amp; Algorithms 2025) </a>on August 4-8th, 2025 at TU Wien. </p> </li>
+		<li> <p> <a href="https://sites.google.com/usc.edu/gscc-2025"> GSCC 2025 (Graduate Student Combinatorics Conference) </a>on March 15-17th, 2025 at USC. </p> </li>
+
+		
+	</ul>
+    </section>
+
+    <section id="about">
+        <h2>Who am I? (About Me) </h2>
+        <p> (Possibly a hotdog.) A sixth year PhD candidate at UIC whose research interests include a choice from (Probability, Combinatorics, Statistical Physics). <br>
+			I completeted my master's degree -along the way of my PhD- in mathematical computer science at UIC in 2022 and my bachelor's degree in mathematics with a minor in philosophy at Western Michigan University in 2019. <br>
+			I am currently being advised by <a href="https://marcusmichelen.org/"> Marcus Michelen </a> (Northwestern University). </p>
+    </section>
+	
+	<section id="Things I do">
+		<h2> Things I do and service </h2>
+		<ul>
+		<li> <p> I am currently one of the co-organizers of the <a href="https://sites.google.com/view/gscc2026/home"> 2026 GSCC </a> (Graduate Student Combinatorics Conference). </p> </li>
+		<li> <p> Since its inception I have been a (Lead) Graduate Instructor for <a href="https://sites.google.com/view/yspatuic/"> YSP at UIC </a>. This is a free high school math program meant "to introduce a diverse group of high schoolers from all over Chicago to exciting topics in mathematics.." </p> </li>
+		<li> <p> I am one of the co-founders and co-organizers for the <a href="https://homepages.math.uic.edu/~mgintz2/drp/"> DRP at UIC </a> which started in Fall 2023 and was modeled after the <a href="https://sites.cns.utexas.edu/utgd/directed-reading-program"> Directed Reading Program at UT-Austin </a>. This reading program has the expressed goal of supporting students of all backgrounds develop skills useful to learn math independently and pair undergraduates with a graduate mentor to assist with that goal. More info about DRPs can be found <a href="https://sites.google.com/view/drp-network/home?authuser=0"> here</a>. </li>
+		<li> DRP Mentor <ul> 
+		<li>Mentee: Elijah Siajunza (Spring, Summer 2025)   </li> 
+		<li>Mentee: Will Brown (Spring 2025) </li>
+		<li> Mentee: Sebastian Tous (Spring, Summer, Fall 2024) </li>		
+		</ul> </li>
+		<li> <p> In Fall 2025, I served as a department organizer for a new undergraduate mentoring program to help foster academic and social interation and a sense of belonging among the UIC MSCS undergraduates. </p> </li>
+		<li> <p> On November 10, 2024 I was a graduate helper for <a href="https://sites.google.com/view/soniamathday2024/home"> Sonia Kovalevsky Math Day </a> which is meant to encourage young girls and boys to continue their study of mathematics. </p> </li>
+		<li> <p> On June 24, 2024 I was a graduate helper for a <a href="https://sites.google.com/view/mp-chicago2024/home"> Math & Physics in Chicago day </a> where students from the Cayman Islands learned a bit of math, physics, and did some hands on activities. </p> </li>
+		<li> <p> I have been both a member and mentor for <a href="https://sites.google.com/view/symbols-of-inclusion/home"> Symbols of Inclusion</a>. </p> </li>
+		<li> <p> During F23-S24 I was the MSCS department representative to the UIC <a href="https://gradstudentcouncil.uic.edu/"> Graduate Student Council </a>.</p> </li>
+		<li> <p> In Falls 2025, 2024, 2023 I was a judge for <a href="https://www.mathcirclesofchicago.org/qed"> QED </a>, a middle, high school math fair, ran by Math Circles of Chicago. </p> </li>
+		<li> <p> In Fall 2023, I was an instructor for <a href="https://www.mathcirclesofchicago.org/"> Math Circles of Chicago </a> at Gads Hill Community Center. </p> </li>
+		<li> <p> In Spring 2022, I was the organizer for the UIC MSCS Graduate Student Colloquium. You can find the schedule of talks <a href="GSC.html"> here </a>. </p> </li>
+		<li> <p> I served as (F21-S22) co-president of UIC's <a href="https://mgsa.math.uic.edu/index.php"> Math Graduate Student Association </a> and currently maintain its webpage, store, and run its <a href="https://mgsa.math.uic.edu/pong.php">Ping Pong League.</a></p> </li>
+		</ul>
+	</section>	
+	
+		<section id="Awards">
+		<h2>Awards</h2>
+		<ul>
+			<li> 2025 Graduate Student Excellence in Teaching and Mentoring Award (<a href="https://teaching.uic.edu/news-2/spotlight/awards-uic-teaching-recognition/gsetma-recipients/#2024-25-gsetma-honorable-mentions/"> GSETMA </a>) Honorable Mention, UIC Graduate College </li> 
+			<li> 2024-2025 Teaching Award, UIC MSCS Department </li>
+			<li> 2023-2024 MSCS Graduate Student Service Award </li>
+			<li> 2023-2024 Professor Herbert Alexander Award, UIC MSCS Department </li>
+			<li> 2022-2023 Bernard Kurtin Scholarship, UIC MSCS Department </li>
+		</ul>
+	</section>
+	
+	<section id="Conferences Attended">
+	<h2> <a href="ConferencesAttended.html"> Conferences Attended </a> </h2>
+	<p> Here is an incomplete list of conferences I've attended. (In case you are wondering if we've met before.) </p>
+	</section>
+
+     <section id="pictures">
+        <h2>Pictures of Me (and cats)</h2>
+        <!-- Carousel Section -->
+        <div class="carousel">
+            <div class="carousel-images">
+                <img src="Images/BadBoardwork.JPG" alt="HotdogMath"  height="360" width ="360">
+				<img src="Images/Expert.jpg" alt="Collaborator"  height="360" width ="270">
+				<img src="Images/GooseAtBean.jpg" alt="HonkHonk"  height="360" width ="270">
+				<img src="Images/SelfReflection.jpg" alt="A look in the mirror"  height="360" width ="270">
+				<img src="Images/Lincoln.jpg" alt="Illinoisians" >
+				<img src="Images/Stare.jpg" alt="What is it you see in these eyes"  height="360" width ="270">
+				<img src="Images/bffs.jpg" alt="The Bean" >
+                <img src="Images/BeanDog.jpg" alt="Good Times"  height="360" width ="270">
+                <img src="Images/Jules1.jpg" alt="VeryHelpful"  height="360" width ="270">
+                <img src="Images/CasimirNew1.jpg" alt="BigBoy" height="360" width ="270">
+				<img src="Images/TwoFriends.jpg" alt="MeowMeow"  height="360" width ="270">
+				<img src="Images/BernieHotdog.jpg" alt="Neat"  height="360" width ="270">
+				<img src="Images/Jules-Laptop.jpg" alt="Helpful"  height="360" width ="270">
+                <!-- Add more images as needed -->
+            </div>
+            <button class="carousel-button prev" onclick="moveCarousel(-1)">&#10094;</button>
+            <button class="carousel-button next" onclick="moveCarousel(1)">&#10095;</button>
+        </div>
+		<p> Pictured here: Me (photo credit: Amelia Pompilio (ignore bad boardwork)), The Bean, a good goose, Jules, Casimir, Me with Bernie Sanders for an event I organized at UIC in Spring 2023. (This image carousel is a work in progress, one day it will get better and keep going.)
+    </section>
+
+
+    <section id="friends">
+        <h2>Friends</h2>
+        <ul>
+			<li> <a href="https://sites.math.rutgers.edu/~stw77/"> Sam </a> </li>
+			<li> <a href="https://aragogh.github.io/"> Anish </a> </li>
+			<li> <a href="https://tmaran2.people.uic.edu/"> Jake </a> </li>
+			<li> <a href="https://homepages.math.uic.edu/~apompi2/"> Amy </a> </li>
+			<li> <a href="https://homepages.math.uic.edu/~emilyc10/"> Emily </a> </li>
+			<li> <a href="https://homepages.math.uic.edu/~cmizge2/"> Clay </a> </li>
+			<li> <a href="https://homepages.math.uic.edu/~mgintz2/"> Michael </a> </li>
+			<li> <a href="https://sites.google.com/uic.edu/alexandriawheeler/home"> Lexie </a> </li>
+			<li> Do not see your name, but believe you should be here, please reach out. </li>		
+		</ul>	
+    </section>
+
+	
+	<section id="More">
+	<h2> <a href="more.html"> More </a>
+	</section>
+
+    <footer>
+        <p>&copy; 2024 Nick Christo. All rights reserved.</p>
+    </footer>
+
+<style>
+.carousel {
+    position: relative;
+    max-width: 800px; /* Adjust width as needed */
+    margin: auto;
+    overflow: hidden; /* Hide overflowing images */
+    border-radius: 4px;
+}
+
+.carousel-images {
+    display: flex; /* Keep images in one row */
+    transition: transform 0.5s ease-in-out; /* Smooth sliding */
+}
+
+.carousel-images img {
+    flex: 0 0 50%; /* Show 2 images at a time (50% each) */
+    max-width: 50%;
+    height: auto; /* Keeps the image's aspect ratio */
+    object-fit: contain; /* Show entire image without cropping */
+    border-radius: 4px;
+    background-color: #fff; /* Optional: adds a background behind images with empty space */
+}
+
+/* Carousel navigation buttons */
+.carousel-button {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background-color: rgba(66, 46, 105, 0.8);
+    color: white;
+    border: none;
+    padding: 10px;
+    cursor: pointer;
+    border-radius: 50%;
+    font-size: 24px;
+    z-index: 10;
+}
+
+.carousel-button.prev {
+    left: 10px;
+}
+
+.carousel-button.next {
+    right: 10px;
+}
+
+.carousel-button:hover {
+    background-color: rgba(66, 46, 105, 1);
+}
+</style>
+
+<script>
+let currentIndex = 0;
+
+function moveCarousel(direction) {
+    const carousel = document.querySelector('.carousel-images');
+    const totalImages = document.querySelectorAll('.carousel-images img').length;
+    const visibleImages = 2; // Show 2 images at a time
+    const maxIndex = totalImages - visibleImages;
+
+    currentIndex += direction;
+    if (currentIndex < 0) currentIndex = 0;
+    if (currentIndex > maxIndex) currentIndex = maxIndex;
+
+    const translateXValue = -(currentIndex * (100 / visibleImages));
+    carousel.style.transform = `translateX(${translateXValue}%)`;
+}
+</script>
+</body>
+</html>
