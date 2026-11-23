@@ -1,0 +1,2353 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Probability Distribution Explorer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400;1,6..72,500&family=Public+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+body { margin: 0; }
+/* Layout: view tabs on top; shared distribution rail on the left; each tab's controls and charts stacked on the right; one column on phones.
+   Color roles: blue = the distribution, amber = the event being measured, magenta = mean, teal = sigma and bounds. */
+:root {
+  --bg: #f4f6f9;
+  --surface: #ffffff;
+  --ink: #18202c;
+  --muted: #5a6577;
+  --rule: #dfe4ec;
+  --bar: #2c5ca3;
+  --bar-hi: #11366f;
+  --mean: #b3245a;
+  --sd: #0d8587;
+  --ev: #b5650d;
+  --chip: #e9eef5;
+  --display: "Newsreader", "Iowan Old Style", Georgia, serif;
+  --body: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #10151c; --surface: #171f29; --ink: #e5eaf1; --muted: #97a2b2; --rule: #29333f;
+    --bar: #6d9be2; --bar-hi: #b4cff7; --mean: #f06c9e; --sd: #39c4c6; --ev: #f2a742; --chip: #212b37;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #10151c; --surface: #171f29; --ink: #e5eaf1; --muted: #97a2b2; --rule: #29333f;
+  --bar: #6d9be2; --bar-hi: #b4cff7; --mean: #f06c9e; --sd: #39c4c6; --ev: #f2a742; --chip: #212b37;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.5;
+  padding-block: 28px 48px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; }
+header h1 { font-family: var(--display); font-weight: 500; font-size: clamp(1.7rem, 3.2vw, 2.3rem); margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+header p { margin: 4px 0 0; color: var(--muted); max-width: 70ch; }
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--rule); overflow-x: auto; }
+.tabs button {
+  font: 600 14.5px var(--body); color: var(--muted); background: none; border: 0;
+  border-bottom: 2px solid transparent; margin-bottom: -1px; padding: 8px 16px 9px; cursor: pointer; white-space: nowrap;
+}
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--bar); }
+.tabs button:focus-visible { outline: 2px solid var(--bar); outline-offset: -2px; border-radius: 4px; }
+.app { display: grid; grid-template-columns: minmax(270px, 330px) minmax(0, 1fr); gap: 22px; align-items: start; }
+@media (max-width: 840px) { .app { grid-template-columns: minmax(0, 1fr); } }
+.panel { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 18px; display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+.label { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; margin-bottom: 8px; }
+.group-lab { font-size: 12.5px; color: var(--muted); margin: 0 0 6px; }
+.group-lab + .seg + .group-lab { margin-top: 12px; }
+.seg { display: flex; flex-wrap: wrap; gap: 6px; }
+.seg button, .btn {
+  font: 500 13.5px var(--body); color: var(--ink); background: var(--chip); border: 1px solid transparent;
+  border-radius: 6px; padding: 6px 10px; cursor: pointer; font-variant-numeric: tabular-nums;
+}
+.seg button[aria-pressed="true"], .btn.primary { background: var(--bar); color: var(--surface); }
+.seg button i, .btn i { font-family: var(--display); font-size: 1.08em; }
+.seg button:focus-visible, .btn:focus-visible, .switch:focus-within, input:focus-visible, .zoom button:focus-visible { outline: 2px solid var(--bar); outline-offset: 2px; }
+.notation { font-family: var(--display); font-size: 1.55rem; line-height: 1.2; }
+.desc { color: var(--muted); font-size: 14px; margin: 4px 0 0; max-width: 72ch; }
+.desc i, .notation i { font-family: var(--display); font-size: 1.08em; }
+.params { display: flex; flex-direction: column; gap: 12px; }
+.params.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px 26px; }
+.param { display: grid; grid-template-columns: 26px minmax(0, 1fr) 78px; gap: 10px; align-items: center; }
+.param .sym { font-family: var(--display); font-style: italic; font-size: 1.2rem; text-align: center; }
+.param input[type="range"] { width: 100%; accent-color: var(--bar); }
+.param.ev input[type="range"] { accent-color: var(--ev); }
+.param input[type="number"] {
+  width: 100%; font: 14px var(--mono); padding: 5px 6px; border: 1px solid var(--rule); border-radius: 6px;
+  background: var(--bg); color: var(--ink); font-variant-numeric: tabular-nums;
+}
+.toggles { display: flex; flex-wrap: wrap; gap: 8px 24px; }
+.switch { display: flex; align-items: center; gap: 10px; cursor: pointer; border-radius: 6px; padding: 2px; user-select: none; }
+.switch input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.track { width: 36px; height: 20px; border-radius: 10px; background: var(--rule); position: relative; flex: none; transition: background .15s; }
+.track::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--surface); transition: transform .15s; box-shadow: 0 1px 2px rgba(0,0,0,.25); }
+.switch input:checked + .track::after { transform: translateX(16px); }
+.switch.mean input:checked + .track { background: var(--mean); }
+.switch.sd input:checked + .track { background: var(--sd); }
+.switch.ev input:checked + .track { background: var(--ev); }
+.switch .math { font-family: var(--display); font-size: 1.05rem; }
+.moments { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px 14px; align-items: baseline; margin: 0; }
+.moments dt { font-family: var(--display); font-size: 1.05rem; white-space: nowrap; }
+.moments dd { margin: 0; text-align: right; font-family: var(--display); font-size: 1.02rem; min-width: 0; overflow-wrap: anywhere; }
+.moments dd .num { font-family: var(--mono); font-size: 13.5px; font-variant-numeric: tabular-nums; color: var(--ink); }
+.moments dd .eq { color: var(--muted); }
+.formula { font-family: var(--display); font-size: 1.12rem; background: var(--bg); border-radius: 8px; padding: 10px 12px; overflow-x: auto; line-height: 1.9; }
+.cond { font-size: .88em; color: var(--muted); }
+.frac { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; font-size: .82em; line-height: 1.15; margin: 0 .1em; }
+.frac > span:first-child { border-bottom: 1px solid currentColor; padding: 0 .25em; }
+.binom { display: inline-flex; align-items: center; vertical-align: middle; margin: 0 .08em; }
+.binom .p { font-size: 1.85em; font-weight: 300; line-height: 1; transform: translateY(-.04em); }
+.binom .st { display: inline-flex; flex-direction: column; font-size: .78em; line-height: 1.1; text-align: center; padding: 0 .05em; }
+.charts { min-width: 0; }
+.pane { display: flex; flex-direction: column; gap: 22px; min-width: 0; }
+.card, .chart-card { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 16px; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+.chart-card { padding-bottom: 10px; gap: 6px; }
+.chart-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 6px 16px; }
+.chart-head h2 { font-family: var(--display); font-weight: 500; font-size: 1.25rem; margin: 0; }
+.readout { font-family: var(--mono); font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; min-height: 1.5em; overflow-wrap: anywhere; }
+.readout b { color: var(--ink); font-weight: 500; }
+.chart { width: 100%; touch-action: pan-y; user-select: none; -webkit-user-select: none; }
+.chart.pan { cursor: grab; }
+.chart.panning { cursor: grabbing; }
+.chart.drag { cursor: ew-resize; }
+.chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.note { font-size: 12.5px; color: var(--muted); margin: 2px 0 4px; }
+.zoom { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.zoom button {
+  min-width: 30px; height: 28px; padding: 0 9px; font: 600 14px var(--body); color: var(--ink);
+  background: var(--chip); border: 1px solid transparent; border-radius: 6px; cursor: pointer;
+}
+.zoom button.attn { background: var(--ev); color: var(--surface); }
+.zoom .offnote { font-size: 12px; color: var(--ev); margin-right: 4px; }
+.intbox { display: flex; flex-direction: column; gap: 12px; padding-top: 14px; border-top: 1px solid var(--rule); }
+.result { font-family: var(--display); font-size: 1.1rem; line-height: 1.7; overflow-x: auto; }
+.result b { font: 500 .92em var(--mono); color: var(--ev); }
+.result .small { font-family: var(--body); font-size: 13px; color: var(--muted); display: block; line-height: 1.45; }
+.statement { font-family: var(--display); font-size: 1.35rem; margin: 0; line-height: 1.6; overflow-x: auto; }
+.cmp { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
+.cmp-item { border-radius: 8px; padding: 10px 12px; background: var(--bg); display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.cmp-item .k { font-size: 11.5px; text-transform: uppercase; letter-spacing: .08em; font-weight: 600; }
+.cmp-item.ev .k { color: var(--ev); }
+.cmp-item.bd .k { color: var(--sd); }
+.cmp-item .v { font: 500 1.6rem var(--mono); font-variant-numeric: tabular-nums; }
+.cmp-item .sub { font: 12px var(--mono); color: var(--muted); line-height: 1.45; min-height: 2.9em; white-space: pre; overflow: hidden; text-overflow: ellipsis; }
+.meter { position: relative; height: 12px; border-radius: 6px; background: var(--chip); }
+.meter .fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--ev); border-radius: 6px; }
+.meter .mark { position: absolute; top: -5px; bottom: -5px; width: 3px; margin-left: -1.5px; background: var(--sd); border-radius: 2px; }
+.meter-scale { display: flex; justify-content: space-between; font: 11.5px var(--mono); color: var(--muted); margin-top: -6px; }
+.verdict { margin: 0; font-size: 14px; line-height: 1.5; min-height: 3em; }
+.msg { background: var(--chip); border-radius: 8px; padding: 10px 12px; font-size: 14px; margin: 0; }
+.msg i { font-family: var(--display); font-size: 1.08em; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 18px; font-size: 12.5px; color: var(--muted); margin: 2px 0; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { font-family: var(--display); font-size: 1.08em; }
+.sw { display: inline-block; width: 14px; height: 10px; border-radius: 2px; flex: none; }
+.sw.line { height: 0; border-top: 2px dashed var(--ink); border-radius: 0; }
+.sw.solid { height: 0; border-top: 3px solid; border-radius: 0; }
+.sw.dot { width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid var(--ink); }
+.btnrow { display: flex; flex-wrap: wrap; gap: 6px; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); gap: 10px 16px; margin: 0; }
+.stats div { display: flex; flex-direction: column; min-width: 0; }
+.stats dt { font-family: var(--display); font-size: 1rem; color: var(--muted); }
+.stats dd { margin: 0; font: 500 1.12rem var(--mono); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.mini { font-size: 13px; color: var(--muted); display: inline-flex; gap: 6px; align-items: center; cursor: pointer; }
+svg .tick text, svg .axlab { fill: var(--muted); font: 11.5px var(--mono); }
+svg .grid { stroke: var(--rule); stroke-width: 1; }
+svg .axis { stroke: var(--muted); stroke-width: 1; }
+svg .bar { fill: var(--bar); }
+svg .bar.hi { fill: var(--bar-hi); }
+svg .bar.ev { fill: var(--ev); }
+svg .bar.dim { fill-opacity: .3; }
+svg .bar.faint { fill-opacity: .2; }
+svg .bar.tailo { fill-opacity: .5; }
+svg .area { fill: var(--bar); fill-opacity: .09; }
+svg .area.faint { fill-opacity: .06; }
+svg .tailarea { fill: var(--bar); fill-opacity: .28; }
+svg .shade { fill: var(--bar); fill-opacity: .3; }
+svg .evarea { fill: var(--ev); fill-opacity: .42; }
+svg .curve { stroke: var(--bar); stroke-width: 2.25; fill: none; stroke-linejoin: round; }
+svg .curve.faintline { stroke-opacity: .45; stroke-width: 1.5; }
+svg .evline { stroke: var(--ev); stroke-width: 1.5; stroke-dasharray: 5 3; fill: none; }
+svg .evline.solid { stroke-dasharray: none; }
+svg .tline { stroke: var(--bar); stroke-width: 1.5; stroke-dasharray: 5 3; }
+svg .evlab { fill: var(--ev); font: italic 500 14px var(--display); }
+svg .tlab { fill: var(--bar); font: italic 500 14px var(--display); }
+svg .evnum { fill: var(--ev); font: 500 12.5px var(--mono); }
+svg .evdot { fill: var(--ev); }
+svg .mcond { fill: var(--ev); fill-opacity: .5; }
+svg .mcond.tail { fill-opacity: .95; }
+svg .mcurve { stroke: var(--ev); stroke-width: 5; stroke-opacity: .6; fill: none; stroke-linejoin: round; }
+svg .shiftline { stroke: var(--ink); stroke-width: 1.6; stroke-dasharray: 4 3; fill: none; }
+svg .shiftdot { fill: none; stroke: var(--ink); stroke-width: 1.5; }
+svg .band { fill: var(--sd); fill-opacity: .15; }
+svg .bandedge { stroke: var(--sd); stroke-opacity: .55; stroke-width: 1; stroke-dasharray: 3 3; }
+svg .sdline { stroke: var(--sd); stroke-width: 1.6; fill: none; }
+svg .sdlab { fill: var(--sd); font: 500 12.5px var(--mono); }
+svg .meanline { stroke: var(--mean); stroke-width: 2; stroke-dasharray: 6 4; }
+svg .meanlab { fill: var(--mean); font: 500 12.5px var(--mono); }
+svg .meanmark { fill: var(--mean); }
+svg .step { stroke: var(--bar); stroke-width: 2.25; fill: none; }
+svg .jump { stroke: var(--bar); stroke-opacity: .4; stroke-width: 1; stroke-dasharray: 2 3; }
+svg .dot { fill: var(--bar); }
+svg .odot { fill: var(--surface); stroke: var(--bar); stroke-width: 1.6; }
+svg .guide { stroke: var(--bar-hi); stroke-width: 1; stroke-dasharray: 3 3; }
+svg .ring { fill: none; stroke: var(--bar-hi); stroke-width: 2; }
+svg .hdot { fill: var(--bar-hi); }
+svg .ecurve { stroke: var(--ev); stroke-width: 2.5; fill: none; stroke-linejoin: round; }
+svg .bcurve { stroke: var(--sd); stroke-width: 2.25; fill: none; stroke-linejoin: round; }
+svg .gap { fill: var(--sd); fill-opacity: .12; }
+svg .marker { stroke: var(--ink); stroke-width: 1.2; stroke-dasharray: 3 3; }
+svg .mdot-e { fill: var(--ev); stroke: var(--surface); stroke-width: 1.5; }
+svg .mdot-b { fill: var(--sd); stroke: var(--surface); stroke-width: 1.5; }
+svg .sbar { fill: var(--bar); fill-opacity: .55; }
+svg .truth { stroke: var(--ink); stroke-width: 2; fill: none; stroke-linejoin: round; }
+svg .xbar { stroke: var(--bar-hi); stroke-width: 2; }
+svg .xbarlab { fill: var(--bar-hi); font: 500 12.5px var(--mono); }
+svg .run { stroke: var(--bar); stroke-width: 2; fill: none; stroke-linejoin: round; }
+svg .ghost { stroke: var(--muted); stroke-opacity: .5; stroke-width: 1.2; fill: none; }
+svg .funnel { fill: var(--sd); fill-opacity: .14; }
+svg .funneledge { stroke: var(--sd); stroke-opacity: .6; stroke-width: 1; fill: none; }
+svg .empty { fill: var(--muted); font: 13.5px var(--body); }
+.app.solo { grid-template-columns: minmax(0, 1fr); }
+.app.solo > .panel { display: none; }
+.trio { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 22px; }
+.tries { margin: 0; padding-left: 1.2em; display: flex; flex-direction: column; gap: 6px; font-size: 14px; max-width: 80ch; }
+.tries i, .chart-head h2 i, .stats dt i { font-family: var(--display); }
+svg .latt { fill: var(--bar); fill-opacity: .5; }
+svg .lattline { stroke: var(--bar); stroke-width: 1.5; fill: none; stroke-linejoin: round; }
+svg .phi { stroke: var(--ink); stroke-width: 2; fill: none; stroke-linejoin: round; }
+svg .phidash { stroke: var(--ink); stroke-width: 1.6; stroke-dasharray: 5 4; fill: none; }
+svg .simstep { stroke: var(--ev); stroke-width: 1.6; fill: var(--ev); fill-opacity: .14; }
+svg .gapline { stroke: var(--ev); stroke-width: 3; }
+svg .ksline { stroke: var(--bar); stroke-width: 2; fill: none; stroke-linejoin: round; }
+svg .ksdot { fill: var(--bar); }
+svg .winband { fill: var(--ev); fill-opacity: .13; }
+svg .rug { stroke: var(--bar); stroke-width: 1.5; }
+svg .pathfaint { stroke: var(--muted); stroke-opacity: .4; stroke-width: 1.2; fill: none; }
+svg .pathmain { stroke: var(--bar); stroke-width: 2.25; fill: none; }
+@media (prefers-reduced-motion: reduce) { .track, .track::after { transition: none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Probability Distribution Explorer</h1>
+    <p>Pick a distribution and set its parameters on the left. Explore its mass or density function and CDF, test Markov's and Chebyshev's inequalities against exact probabilities, draw samples and watch the running mean settle, see the central limit theorem at work, or simulate a Poisson process.</p>
+  </header>
+
+  <div class="tabs" role="tablist" aria-label="View">
+    <button type="button" role="tab" id="tab-explore" data-tab="explore" aria-controls="pane-explore">Explore</button>
+    <button type="button" role="tab" id="tab-bounds" data-tab="bounds" aria-controls="pane-bounds">Deviation bounds</button>
+    <button type="button" role="tab" id="tab-sim" data-tab="sim" aria-controls="pane-sim">Simulation</button>
+    <button type="button" role="tab" id="tab-clt" data-tab="clt" aria-controls="pane-clt">Central limit theorem</button>
+    <button type="button" role="tab" id="tab-pp" data-tab="pp" aria-controls="pane-pp">Poisson process</button>
+  </div>
+
+  <div class="app">
+    <aside class="panel" aria-label="Distribution settings">
+      <div>
+        <div class="label">Distribution</div>
+        <div class="group-lab">Discrete</div>
+        <div class="seg" id="distD" role="group" aria-label="Discrete distributions"></div>
+        <div class="group-lab">Continuous</div>
+        <div class="seg" id="distC" role="group" aria-label="Continuous distributions"></div>
+      </div>
+      <div>
+        <div class="notation" id="notation"></div>
+        <p class="desc" id="desc"></p>
+      </div>
+      <div>
+        <div class="label">Parameters</div>
+        <div class="params" id="params"></div>
+      </div>
+      <div id="geoMode" hidden>
+        <div class="label">Geometric convention</div>
+        <div class="seg" role="group" aria-label="Geometric convention">
+          <button type="button" id="geoTrials" data-mode="trials">Trials until success (<i>k</i> ≥ 1)</button>
+          <button type="button" id="geoFails" data-mode="failures">Failures before success (<i>k</i> ≥ 0)</button>
+        </div>
+      </div>
+      <div>
+        <div class="label" id="formulaLabel">PMF</div>
+        <div class="formula" id="formula"></div>
+      </div>
+      <div>
+        <div class="label">Summary</div>
+        <dl class="moments" id="moments"></dl>
+      </div>
+    </aside>
+
+    <main class="charts">
+      <!-- EXPLORE -->
+      <div class="pane" id="pane-explore" role="tabpanel" aria-labelledby="tab-explore">
+        <section class="card" aria-label="Display options">
+          <div class="toggles">
+            <label class="switch mean"><input type="checkbox" id="tMean" checked><span class="track"></span><span class="math">Expected value <i>μ</i></span></label>
+            <label class="switch sd"><input type="checkbox" id="tSD" checked><span class="track"></span><span class="math">Standard deviation <i>σ</i></span></label>
+            <label class="switch ev"><input type="checkbox" id="tInt"><span class="track"></span><span class="math">Shade an interval</span></label>
+          </div>
+          <div class="intbox" id="intBox" hidden>
+            <div class="params two">
+              <div class="param ev"><label class="sym" for="intA-n">a</label><input type="range" id="intA-r" aria-label="a slider"><input type="number" id="intA-n"></div>
+              <div class="param ev"><label class="sym" for="intB-n">b</label><input type="range" id="intB-r" aria-label="b slider"><input type="number" id="intB-n"></div>
+            </div>
+            <div class="seg" id="intEnds" role="group" aria-label="Which endpoints are included">
+              <button type="button" data-e="ii"><i>a</i> ≤ <i>X</i> ≤ <i>b</i></button>
+              <button type="button" data-e="ei"><i>a</i> &lt; <i>X</i> ≤ <i>b</i></button>
+              <button type="button" data-e="ie"><i>a</i> ≤ <i>X</i> &lt; <i>b</i></button>
+              <button type="button" data-e="ee"><i>a</i> &lt; <i>X</i> &lt; <i>b</i></button>
+            </div>
+            <div class="result" id="intResult"></div>
+          </div>
+        </section>
+
+        <section class="chart-card">
+          <div class="chart-head">
+            <h2 id="exTopTitle">Probability mass function</h2>
+            <div class="zoom"><span class="offnote" hidden>Part of the distribution is off the chart</span><button type="button" data-z="out" aria-label="Zoom out">−</button><button type="button" data-z="in" aria-label="Zoom in">+</button><button type="button" data-z="fit" class="fit">Fit</button></div>
+          </div>
+          <div class="readout" id="exTopReadout"></div>
+          <div class="chart pan" id="exTop"></div>
+          <p class="note">The axes stay fixed while you move sliders. Drag sideways on a chart to pan, use − and + to zoom, and press Fit to re-frame.</p>
+        </section>
+
+        <section class="chart-card">
+          <div class="chart-head"><h2>Cumulative distribution function</h2></div>
+          <div class="readout" id="exCdfReadout"></div>
+          <div class="chart pan" id="exCdf"></div>
+          <p class="note" id="exCdfNote"></p>
+        </section>
+
+        <section class="card" id="memCard" hidden>
+          <div class="chart-head"><h2 style="font-family:var(--display);font-weight:500;font-size:1.25rem;margin:0">Memorylessness</h2></div>
+          <p class="statement" id="memStatement"></p>
+          <p class="desc" id="memDesc"></p>
+          <div class="params two">
+            <div class="param ev"><label class="sym" for="memS-n">s</label><input type="range" id="memS-r" aria-label="s slider"><input type="number" id="memS-n"></div>
+            <div class="param"><label class="sym" for="memT-n">t</label><input type="range" id="memT-r" aria-label="t slider"><input type="number" id="memT-n"></div>
+          </div>
+          <div class="chart pan" id="memChart"></div>
+          <div class="legend" id="memLegend"></div>
+          <div class="result" id="memResult"></div>
+        </section>
+      </div>
+
+      <!-- BOUNDS -->
+      <div class="pane" id="pane-bounds" role="tabpanel" aria-labelledby="tab-bounds" hidden>
+        <section class="card">
+          <div class="seg" id="bdKind" role="group" aria-label="Inequality">
+            <button type="button" data-k="markov">Markov</button>
+            <button type="button" data-k="chebyshev">Chebyshev</button>
+          </div>
+          <p class="statement" id="bdStatement"></p>
+          <p class="desc" id="bdDesc"></p>
+          <div class="param ev"><label class="sym" id="bdSym" for="bdV-n">a</label><input type="range" id="bdV-r" aria-label="Threshold slider"><input type="number" id="bdV-n"></div>
+          <p class="msg" id="bdMsg" hidden></p>
+          <div class="cmp" id="bdCmp">
+            <div class="cmp-item ev"><span class="k">Exact probability</span><span class="v" id="bdExact"></span><span class="sub" id="bdExactSub"></span></div>
+            <div class="cmp-item bd"><span class="k">Bound</span><span class="v" id="bdBound"></span><span class="sub" id="bdBoundSub"></span></div>
+          </div>
+          <div id="bdMeterWrap">
+            <div class="meter" aria-hidden="true"><div class="fill" id="bdFill"></div><div class="mark" id="bdMark"></div></div>
+          </div>
+          <div class="meter-scale" aria-hidden="true"><span>0</span><span>0.5</span><span>1</span></div>
+          <p class="verdict" id="bdVerdict"></p>
+        </section>
+
+        <section class="chart-card">
+          <div class="chart-head">
+            <h2 id="bdTopTitle">The event on the distribution</h2>
+            <div class="zoom"><span class="offnote" hidden>Part of the distribution is off the chart</span><button type="button" data-z="out" aria-label="Zoom out">−</button><button type="button" data-z="in" aria-label="Zoom in">+</button><button type="button" data-z="fit" class="fit">Fit</button></div>
+          </div>
+          <div class="chart pan" id="bdTop"></div>
+          <div class="legend" id="bdTopLegend"></div>
+        </section>
+
+        <section class="chart-card">
+          <div class="chart-head">
+            <h2 id="bdCurveTitle">Exact probability and bound</h2>
+            <label class="mini"><input type="checkbox" id="bdLog"> Log scale</label>
+          </div>
+          <div class="chart drag" id="bdCurve"></div>
+          <div class="legend">
+            <span><i class="sw solid" style="border-color:var(--ev)"></i>Exact probability</span>
+            <span><i class="sw solid" style="border-color:var(--sd)"></i>Bound (capped at 1)</span>
+            <span><i class="sw" style="background:var(--sd);opacity:.25"></i>Slack between them</span>
+          </div>
+          <p class="note">Drag on this chart to move the threshold.</p>
+        </section>
+      </div>
+
+      <!-- SIMULATION -->
+      <div class="pane" id="pane-sim" role="tabpanel" aria-labelledby="tab-sim" hidden>
+        <section class="card">
+          <div class="btnrow">
+            <button type="button" class="btn" data-draw="1">Draw 1</button>
+            <button type="button" class="btn" data-draw="10">Draw 10</button>
+            <button type="button" class="btn" data-draw="100">Draw 100</button>
+            <button type="button" class="btn" data-draw="1000">Draw 1,000</button>
+            <button type="button" class="btn primary" id="simRun">Run</button>
+            <button type="button" class="btn" id="simNew">New run</button>
+            <button type="button" class="btn" id="simReset">Reset</button>
+          </div>
+          <dl class="stats" id="simStats"></dl>
+          <p class="note" id="simNote">New run keeps the previous running-mean path in grey for comparison. Changing the distribution or its parameters starts over.</p>
+        </section>
+
+        <section class="chart-card">
+          <div class="chart-head">
+            <h2 id="simHistTitle">Sample histogram</h2>
+            <div class="zoom"><span class="offnote" hidden>Part of the distribution is off the chart</span><button type="button" data-z="out" aria-label="Zoom out">−</button><button type="button" data-z="in" aria-label="Zoom in">+</button><button type="button" data-z="fit" class="fit">Fit</button></div>
+          </div>
+          <div class="chart pan" id="simHist"></div>
+          <div class="legend" id="simHistLegend"></div>
+        </section>
+
+        <section class="chart-card">
+          <div class="chart-head"><h2>Running mean</h2></div>
+          <div class="chart" id="simMean"></div>
+          <div class="legend">
+            <span><i class="sw solid" style="border-color:var(--bar)"></i>Running mean <i>X̄</i><sub>n</sub> (this run)</span>
+            <span><i class="sw solid" style="border-color:var(--muted);opacity:.6"></i>Earlier runs</span>
+            <span><i class="sw" style="background:var(--sd);opacity:.3"></i><i>μ</i> ± 2<i>σ</i>/√<i>n</i></span>
+          </div>
+          <p class="note">The horizontal axis is logarithmic. By the law of large numbers, <i>X̄</i><sub>n</sub> → <i>μ</i>. The shaded band <i>μ</i> ± 2<i>σ</i>/√<i>n</i> comes from the central limit theorem: for each fixed <i>n</i>, <i>X̄</i><sub>n</sub> lands inside it with probability about 0.95 once <i>n</i> is large. A single run still leaves the band from time to time (by the law of the iterated logarithm it does so infinitely often), so one path is not expected to stay inside. The Central limit theorem tab shows the distribution of <i>X̄</i><sub>n</sub> itself.</p>
+        </section>
+      </div>
+
+      <!-- CLT -->
+      <div class="pane" id="pane-clt" role="tabpanel" aria-labelledby="tab-clt" hidden>
+        <section class="card">
+          <p class="statement" id="cltStatement"></p>
+          <p class="desc" id="cltDesc"></p>
+          <div class="param"><label class="sym" for="cltN-n">n</label><input type="range" id="cltN-r" aria-label="Sample size slider" min="1" max="200" step="1"><input type="number" id="cltN-n" min="1" max="200" step="1"></div>
+          <p class="msg" id="cltMsg" hidden></p>
+          <dl class="stats" id="cltStats"></dl>
+          <div class="btnrow">
+            <button type="button" class="btn" id="cltSim1">Simulate 1,000 values of <i>Z</i><sub>n</sub></button>
+            <button type="button" class="btn" id="cltSimClear">Clear simulated values</button>
+          </div>
+        </section>
+
+        <section class="chart-card">
+          <div class="chart-head"><h2>Distribution of the standardized sum <i>Z</i><sub>n</sub></h2></div>
+          <div class="chart" id="cltDist"></div>
+          <div class="legend" id="cltDistLegend"></div>
+          <p class="note">The horizontal axis is fixed at −4 ≤ <i>z</i> ≤ 4 for every <i>n</i>, so you watch the shape change rather than the scale. Integer-valued sums are drawn as bars of width 1/(<i>σ</i>√<i>n</i>) and height P(<i>S</i><sub>n</sub> = <i>k</i>) · <i>σ</i>√<i>n</i>, so their total area is 1 and they are comparable with the normal density.</p>
+        </section>
+
+        <section class="chart-card">
+          <div class="chart-head"><h2>CDF of <i>Z</i><sub>n</sub> against Φ</h2></div>
+          <div class="chart" id="cltCdf"></div>
+          <div class="legend">
+            <span><i class="sw solid" style="border-color:var(--bar)"></i>CDF of <i>Z</i><sub>n</sub> (exact)</span>
+            <span><i class="sw line"></i>Standard normal CDF Φ</span>
+            <span><i class="sw solid" style="border-color:var(--ev)"></i>Largest gap</span>
+          </div>
+        </section>
+
+        <section class="chart-card">
+          <div class="chart-head"><h2>How fast the gap closes</h2></div>
+          <div class="chart" id="cltKs"></div>
+          <div class="legend">
+            <span><i class="sw solid" style="border-color:var(--bar)"></i>Largest CDF gap sup |<i>F</i><sub>n</sub> − Φ| (exact)</span>
+            <span><i class="sw solid" style="border-color:var(--sd)"></i>Berry–Esseen bound 0.4748 · E|<i>X</i> − <i>μ</i>|³ / (<i>σ</i>³√<i>n</i>)</span>
+          </div>
+          <p class="note">Both axes are logarithmic, so a 1/√<i>n</i> rate is a straight line of slope −1/2. Skewed distributions converge at that rate. Symmetric continuous ones such as the uniform converge faster, about 1/<i>n</i>. Integer-valued sums stay at order 1/√<i>n</i> even when symmetric, because their CDF jumps by roughly 0.4/(<i>σ</i>√<i>n</i>) at every value.</p>
+        </section>
+      </div>
+
+      <!-- POISSON PROCESS -->
+      <div class="pane" id="pane-pp" role="tabpanel" aria-labelledby="tab-pp" hidden>
+        <section class="card">
+          <div class="chart-head"><h2>Poisson process with rate <i>λ</i></h2></div>
+          <p class="desc">Arrivals happen one at a time, independently, at an average rate of <i>λ</i> per unit time; <i>N</i>(<i>t</i>) counts the arrivals in [0, <i>t</i>]. Three equivalent descriptions: the gaps between arrivals are independent Exponential(<i>λ</i>); the number of arrivals in any window of length <i>w</i> is Poisson(<i>λw</i>); and counts in disjoint windows are independent. The page simulates 400 independent paths and compares them with these facts.</p>
+          <div class="params two">
+            <div class="param"><label class="sym" for="ppL-n">λ</label><input type="range" id="ppL-r" aria-label="Rate slider"><input type="number" id="ppL-n"></div>
+            <div class="param"><label class="sym" for="ppT-n">T</label><input type="range" id="ppT-r" aria-label="Time horizon slider"><input type="number" id="ppT-n"></div>
+            <div class="param ev"><label class="sym" for="ppS-n">s</label><input type="range" id="ppS-r" aria-label="Window start slider"><input type="number" id="ppS-n"></div>
+            <div class="param ev"><label class="sym" for="ppW-n">w</label><input type="range" id="ppW-r" aria-label="Window length slider"><input type="number" id="ppW-n"></div>
+          </div>
+          <div class="btnrow" style="align-items:center">
+            <button type="button" class="btn primary" id="ppNew">New paths</button>
+            <div class="zoom pp"><span class="offnote" hidden>Some data is off the charts</span><button type="button" data-pz="fit" class="fit">Fit axes</button></div>
+          </div>
+          <dl class="stats" id="ppStats"></dl>
+        </section>
+
+        <section class="chart-card">
+          <div class="chart-head"><h2>Sample paths of <i>N</i>(<i>t</i>)</h2></div>
+          <div class="chart" id="ppPaths"></div>
+          <div class="legend">
+            <span><i class="sw solid" style="border-color:var(--bar)"></i>One path, with its arrival times marked on the axis</span>
+            <span><i class="sw solid" style="border-color:var(--muted);opacity:.5"></i>Ten more paths</span>
+            <span><i class="sw line" style="border-color:var(--mean)"></i>E[<i>N</i>(<i>t</i>)] = <i>λt</i></span>
+            <span><i class="sw" style="background:var(--ev);opacity:.3"></i>Window [<i>s</i>, <i>s</i> + <i>w</i>]</span>
+          </div>
+        </section>
+
+        <div class="trio">
+          <section class="chart-card">
+            <div class="chart-head"><h2>Gaps between arrivals</h2></div>
+            <div class="chart" id="ppGaps"></div>
+            <div class="legend"><span><i class="sw" style="background:var(--bar);opacity:.55"></i>All simulated gaps</span><span><i class="sw solid" style="border-color:var(--ink)"></i>Exponential(<i>λ</i>) density</span></div>
+          </section>
+          <section class="chart-card">
+            <div class="chart-head"><h2>Arrivals in [<i>s</i>, <i>s</i> + <i>w</i>]</h2></div>
+            <div class="chart" id="ppCounts"></div>
+            <div class="legend"><span><i class="sw" style="background:var(--bar);opacity:.55"></i>Share of paths</span><span><i class="sw solid" style="border-color:var(--ink)"></i>Poisson(<i>λw</i>) PMF</span></div>
+          </section>
+          <section class="chart-card">
+            <div class="chart-head"><h2>Wait from <i>s</i> to the next arrival</h2></div>
+            <div class="chart" id="ppWait"></div>
+            <div class="legend"><span><i class="sw" style="background:var(--bar);opacity:.55"></i>Simulated waits</span><span><i class="sw solid" style="border-color:var(--ink)"></i>Exponential(<i>λ</i>) density</span></div>
+          </section>
+        </div>
+
+        <section class="card">
+          <div class="label">Things to try</div>
+          <ul class="tries">
+            <li>Slide <i>s</i> with <i>w</i> fixed. The window histogram stays Poisson(<i>λw</i>), because the increments are stationary.</li>
+            <li>Slide <i>s</i> and watch the wait histogram. It stays Exponential(<i>λ</i>) wherever you start, which is memorylessness again.</li>
+            <li>Compare the mean gap, 1/<i>λ</i>, with the mean length of the gap that contains time <i>s</i>, which is close to 2/<i>λ</i>. Long gaps are more likely to cover a given moment. This is the inspection paradox.</li>
+            <li>Make <i>λw</i> large. Poisson(<i>λw</i>) starts to look normal, since the count is a sum of many small independent counts (see the Central limit theorem tab).</li>
+          </ul>
+        </section>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  const $ = id => document.getElementById(id);
+
+  // ---------- math ----------
+  const LF = [0];
+  const lf = m => { while (LF.length <= m) LF.push(LF[LF.length - 1] + Math.log(LF.length)); return LF[m]; };
+  const logC = (N, K) => (K < 0 || K > N) ? -Infinity : lf(N) - lf(K) - lf(N - K);
+  const minus = s => String(s).replace(/^-/, "−");
+  const fmt = (v, d = 4) => {
+    if (!isFinite(v)) return v > 0 ? "∞" : "—";
+    let s = v.toFixed(d);
+    if (/^-0\.?0*$/.test(s)) s = s.slice(1);
+    return minus(s);
+  };
+  const fmtP = v => minus(String(+(+v).toFixed(4)));
+  const fmtS = v => (v > 0 && v < 5e-5) ? v.toExponential(2).replace("e-", "e−") : fmt(v);
+  const fmtR = r => r >= 1000 ? Math.round(r).toLocaleString("en-US") : fmt(r, 1);
+  const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+  function erf(z) {
+    const s = z < 0 ? -1 : 1; z = Math.abs(z);
+    const t = 1 / (1 + 0.3275911 * z);
+    const y = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-z * z);
+    return s * y;
+  }
+  const Phi = z => 0.5 * (1 + erf(z / Math.SQRT2));
+  function niceStep(raw) {
+    if (!(raw > 0) || !isFinite(raw)) return 1;
+    const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+    const r = raw / mag;
+    return (r <= 1 ? 1 : r <= 2 ? 2 : r <= 2.5 ? 2.5 : r <= 5 ? 5 : 10) * mag;
+  }
+  function niceTop(y, cap) {
+    const st = niceStep(Math.max(y, 1e-6) * 1.12 / 5);
+    let t = Math.ceil(Math.max(y, 1e-6) * 1.12 / st) * st;
+    if (cap && t > cap) t = cap;
+    return t;
+  }
+  function decFor(st) { let d = 0; while (d < 8 && Math.abs(Math.round(st * 10 ** d) - st * 10 ** d) > 1e-7) d++; return d; }
+
+  // ---------- markup helpers ----------
+  const I = s => `<i>${s}</i>`;
+  const frac = (a, b) => `<span class="frac"><span>${a}</span><span>${b}</span></span>`;
+  const binom = (a, b) => `<span class="binom"><span class="p">(</span><span class="st"><span>${a}</span><span>${b}</span></span><span class="p">)</span></span>`;
+  const sup = s => `<sup>${s}</sup>`;
+  const X = I("X"), k = I("k"), x = I("x"), n = I("n"), p = I("p"), lam = I("λ"), mu = I("μ"), sg = I("σ");
+  const Xbar = `${I("X̄")}<sub>${n}</sub>`;
+
+  // ---------- state ----------
+  const state = {
+    tab: "explore",
+    dist: "binomial",
+    params: {
+      uniform: { n: 6 }, bernoulli: { p: 0.3 }, binomial: { n: 12, p: 0.35 }, geometric: { p: 0.25 },
+      poisson: { lam: 4 }, hypergeometric: { w: 12, b: 18, n: 10 },
+      cuniform: { a: 1, b: 5 }, exponential: { lam: 1 }, normal: { mu: 0, sigma: 1 }
+    },
+    geoMode: "trials",
+    showMean: true, showSD: true,
+    interval: { on: false, a: 0, b: 1, ends: "ii", key: null },
+    mem: { geometric: { s: 3, t: 2 }, exponential: { s: 1, t: 1 } },
+    bounds: { kind: "chebyshev", k: 2, a: null, key: null, logy: false },
+    clt: { n: 10 },
+    pp: { lam: 1.5, T: 12, s: 4, w: 2 }
+  };
+
+  // ---------- discrete distributions ----------
+  const D = {
+    uniform: {
+      name: "Uniform", family: "discrete",
+      params: [{ key: "n", sym: "n", min: 1, max: () => 40, step: 1 }],
+      sig: q => `${q.n}`,
+      desc: () => `Each of the values 1, 2, …, ${n} is equally likely.`,
+      support: q => ({ lo: 1, hi: q.n }),
+      pmf: (j, q) => 1 / q.n,
+      mean: q => (q.n + 1) / 2,
+      variance: q => (q.n * q.n - 1) / 12,
+      pmfHTML: () => `P(${X} = ${k}) = ${frac(1, n)}, &nbsp; ${k} = 1, 2, …, ${n}`,
+      meanHTML: () => frac(`${n} + 1`, 2),
+      varHTML: () => frac(`${n}${sup(2)} − 1`, 12)
+    },
+    bernoulli: {
+      name: "Bernoulli", family: "discrete",
+      params: [{ key: "p", sym: "p", min: 0, max: () => 1, step: 0.01 }],
+      sig: q => fmtP(q.p),
+      desc: () => `A single trial: ${X} = 1 on success (probability ${p}), ${X} = 0 otherwise.`,
+      support: () => ({ lo: 0, hi: 1 }),
+      pmf: (j, q) => (j === 1 ? q.p : 1 - q.p),
+      mean: q => q.p,
+      variance: q => q.p * (1 - q.p),
+      pmfHTML: () => `P(${X} = ${k}) = ${p}${sup(k)}(1 − ${p})${sup("1−" + k)}, &nbsp; ${k} ∈ {0, 1}`,
+      meanHTML: () => p,
+      varHTML: () => `${p}(1 − ${p})`
+    },
+    binomial: {
+      name: "Binomial", family: "discrete",
+      params: [{ key: "n", sym: "n", min: 1, max: () => 100, step: 1 }, { key: "p", sym: "p", min: 0, max: () => 1, step: 0.01 }],
+      sig: q => `${q.n}, ${fmtP(q.p)}`,
+      desc: () => `Number of successes in ${n} independent trials, each succeeding with probability ${p}.`,
+      support: q => ({ lo: 0, hi: q.n }),
+      pmf: (j, q) => {
+        if (q.p === 0) return j === 0 ? 1 : 0;
+        if (q.p === 1) return j === q.n ? 1 : 0;
+        return Math.exp(logC(q.n, j) + j * Math.log(q.p) + (q.n - j) * Math.log(1 - q.p));
+      },
+      mean: q => q.n * q.p,
+      variance: q => q.n * q.p * (1 - q.p),
+      pmfHTML: () => `P(${X} = ${k}) = ${binom(n, k)} ${p}${sup(k)}(1 − ${p})${sup(n + "−" + k)}, &nbsp; ${k} = 0, 1, …, ${n}`,
+      meanHTML: () => `${n}${p}`,
+      varHTML: () => `${n}${p}(1 − ${p})`
+    },
+    geometric: {
+      name: "Geometric", family: "discrete",
+      params: [{ key: "p", sym: "p", min: 0.02, max: () => 1, step: 0.01 }],
+      sig: q => fmtP(q.p),
+      desc: () => state.geoMode === "trials"
+        ? `Number of independent trials needed to get the first success, each succeeding with probability ${p}.`
+        : `Number of failures before the first success in independent trials, each succeeding with probability ${p}.`,
+      support: () => ({ lo: state.geoMode === "trials" ? 1 : 0, hi: Infinity }),
+      pmf: (j, q) => state.geoMode === "trials" ? Math.pow(1 - q.p, j - 1) * q.p : Math.pow(1 - q.p, j) * q.p,
+      sample: q => {
+        const U = 1 - Math.random();
+        const tr = q.p >= 1 ? 1 : Math.max(1, Math.ceil(Math.log(U) / Math.log(1 - q.p)));
+        return state.geoMode === "trials" ? tr : tr - 1;
+      },
+      mean: q => state.geoMode === "trials" ? 1 / q.p : (1 - q.p) / q.p,
+      variance: q => (1 - q.p) / (q.p * q.p),
+      pmfHTML: () => state.geoMode === "trials"
+        ? `P(${X} = ${k}) = (1 − ${p})${sup(k + "−1")}${p}, &nbsp; ${k} = 1, 2, 3, …`
+        : `P(${X} = ${k}) = (1 − ${p})${sup(k)}${p}, &nbsp; ${k} = 0, 1, 2, …`,
+      meanHTML: () => state.geoMode === "trials" ? frac(1, p) : frac(`1 − ${p}`, p),
+      varHTML: () => frac(`1 − ${p}`, `${p}${sup(2)}`)
+    },
+    poisson: {
+      name: "Poisson", family: "discrete",
+      params: [{ key: "lam", sym: "λ", min: 0.1, max: () => 40, step: 0.1 }],
+      sig: q => fmtP(q.lam),
+      desc: () => `Number of events in a fixed window when events occur independently at average rate ${lam}. It is the limit of Binomial(${n}, ${lam}/${n}) as ${n} → ∞.`,
+      support: () => ({ lo: 0, hi: Infinity }),
+      pmf: (j, q) => Math.exp(-q.lam + j * Math.log(q.lam) - lf(j)),
+      mean: q => q.lam,
+      variance: q => q.lam,
+      pmfHTML: () => `P(${X} = ${k}) = ${frac(`${I("e")}${sup("−" + lam)}${lam}${sup(k)}`, `${k}!`)}, &nbsp; ${k} = 0, 1, 2, …`,
+      meanHTML: () => lam,
+      varHTML: () => lam
+    },
+    hypergeometric: {
+      name: "Hypergeometric", family: "discrete",
+      params: [
+        { key: "w", sym: "w", min: 0, max: () => 60, step: 1 },
+        { key: "b", sym: "b", min: 0, max: () => 60, step: 1 },
+        { key: "n", sym: "n", min: 0, max: q => q.w + q.b, step: 1 }
+      ],
+      sig: q => `${q.w}, ${q.b}, ${q.n}`,
+      desc: () => `Draw ${n} balls without replacement from an urn with ${I("w")} white and ${I("b")} black balls; ${X} counts the white balls drawn.`,
+      support: q => ({ lo: Math.max(0, q.n - q.b), hi: Math.min(q.n, q.w) }),
+      pmf: (j, q) => Math.exp(logC(q.w, j) + logC(q.b, q.n - j) - logC(q.w + q.b, q.n)),
+      mean: q => (q.w + q.b) === 0 ? 0 : q.n * q.w / (q.w + q.b),
+      variance: q => {
+        const N = q.w + q.b;
+        if (N <= 1) return 0;
+        return q.n * (q.w / N) * (q.b / N) * ((N - q.n) / (N - 1));
+      },
+      pmfHTML: () => `P(${X} = ${k}) = ${frac(`${binom(I("w"), k)}${binom(I("b"), n + "−" + k)}`, binom(`${I("w")}+${I("b")}`, n))}<br><span class="cond">for max(0, ${n}−${I("b")}) ≤ ${k} ≤ min(${n}, ${I("w")})</span>`,
+      meanHTML: () => frac(`${n}${I("w")}`, `${I("w")} + ${I("b")}`),
+      varHTML: () => `${n} · ${frac(I("w"), I("N"))} · ${frac(I("b"), I("N"))} · ${frac(`${I("N")} − ${n}`, `${I("N")} − 1`)}`
+    }
+  };
+
+  // ---------- continuous distributions ----------
+  let spareNormal = null;
+  const C = {
+    cuniform: {
+      name: "Uniform", family: "continuous",
+      params: [
+        { key: "a", sym: "a", min: -10, max: () => 10, step: 0.1 },
+        { key: "b", sym: "b", min: -10, max: () => 10, step: 0.1 }
+      ],
+      fix: (q, key) => {
+        if (q.b - q.a >= 0.1 - 1e-9) return;
+        if (key === "a") { q.b = Math.min(10, +(q.a + 0.1).toFixed(4)); q.a = +(q.b - 0.1).toFixed(4); }
+        else { q.a = Math.max(-10, +(q.b - 0.1).toFixed(4)); q.b = +(q.a + 0.1).toFixed(4); }
+      },
+      sig: q => `${fmtP(q.a)}, ${fmtP(q.b)}`,
+      desc: () => `Every point of [${I("a")}, ${I("b")}] is equally likely, so the probability of a subinterval is proportional to its length.`,
+      pdf: (t, q) => (t >= q.a && t <= q.b) ? 1 / (q.b - q.a) : 0,
+      cdf: (t, q) => t <= q.a ? 0 : t >= q.b ? 1 : (t - q.a) / (q.b - q.a),
+      breaks: q => [q.a, q.b],
+      frame: q => { const s = q.b - q.a, m = Math.max(0.35 * s, 0.6); return { x0: q.a - m, x1: q.b + m, ymax: 1 / s }; },
+      sample: q => q.a + (q.b - q.a) * Math.random(),
+      nonneg: q => q.a >= 0,
+      mean: q => (q.a + q.b) / 2,
+      variance: q => (q.b - q.a) ** 2 / 12,
+      median: q => (q.a + q.b) / 2,
+      supportText: q => `[${fmtP(q.a)}, ${fmtP(q.b)}]`,
+      pdfHTML: () => `${I("f")}(${x}) = ${frac(1, `${I("b")} − ${I("a")}`)}, &nbsp; ${I("a")} ≤ ${x} ≤ ${I("b")}`,
+      cdfHTML: () => `${I("F")}(${x}) = ${frac(`${x} − ${I("a")}`, `${I("b")} − ${I("a")}`)}, &nbsp; ${I("a")} ≤ ${x} ≤ ${I("b")}`,
+      meanHTML: () => frac(`${I("a")} + ${I("b")}`, 2),
+      varHTML: () => frac(`(${I("b")} − ${I("a")})${sup(2)}`, 12),
+      medianHTML: () => frac(`${I("a")} + ${I("b")}`, 2)
+    },
+    exponential: {
+      name: "Exponential", family: "continuous",
+      params: [{ key: "lam", sym: "λ", min: 0.1, max: () => 4, step: 0.05 }],
+      sig: q => fmtP(q.lam),
+      desc: () => `Waiting time until the first event when events arrive at rate ${lam}, so the mean wait is 1/${lam}.`,
+      pdf: (t, q) => t < 0 ? 0 : q.lam * Math.exp(-q.lam * t),
+      cdf: (t, q) => t <= 0 ? 0 : 1 - Math.exp(-q.lam * t),
+      breaks: () => [0],
+      frame: q => { const R = Math.log(1000) / q.lam; return { x0: -0.08 * R, x1: R, ymax: q.lam }; },
+      sample: q => -Math.log(1 - Math.random()) / q.lam,
+      nonneg: () => true,
+      mean: q => 1 / q.lam,
+      variance: q => 1 / (q.lam * q.lam),
+      median: q => Math.LN2 / q.lam,
+      supportText: () => `[0, ∞)`,
+      pdfHTML: () => `${I("f")}(${x}) = ${lam}${I("e")}${sup("−" + lam + x)}, &nbsp; ${x} ≥ 0`,
+      cdfHTML: () => `${I("F")}(${x}) = 1 − ${I("e")}${sup("−" + lam + x)}, &nbsp; ${x} ≥ 0`,
+      meanHTML: () => frac(1, lam),
+      varHTML: () => frac(1, `${lam}${sup(2)}`),
+      medianHTML: () => frac("ln 2", lam)
+    },
+    normal: {
+      name: "Normal", family: "continuous",
+      params: [
+        { key: "mu", sym: "μ", min: -10, max: () => 10, step: 0.1 },
+        { key: "sigma", sym: "σ", min: 0.2, max: () => 5, step: 0.05 }
+      ],
+      sig: q => `${fmtP(q.mu)}, ${fmtP(q.sigma * q.sigma)}`,
+      desc: () => `The bell curve centered at ${mu} with spread ${sg}. It is written N(${mu}, ${sg}${sup(2)}) with the variance second; the slider sets ${sg}.`,
+      pdf: (t, q) => Math.exp(-0.5 * ((t - q.mu) / q.sigma) ** 2) / (q.sigma * Math.sqrt(2 * Math.PI)),
+      cdf: (t, q) => Phi((t - q.mu) / q.sigma),
+      breaks: () => [],
+      frame: q => ({ x0: q.mu - 3.8 * q.sigma, x1: q.mu + 3.8 * q.sigma, ymax: 1 / (q.sigma * Math.sqrt(2 * Math.PI)) }),
+      sample: q => {
+        if (spareNormal !== null) { const z = spareNormal; spareNormal = null; return q.mu + q.sigma * z; }
+        const u1 = 1 - Math.random(), u2 = Math.random(), r = Math.sqrt(-2 * Math.log(u1));
+        spareNormal = r * Math.sin(2 * Math.PI * u2);
+        return q.mu + q.sigma * r * Math.cos(2 * Math.PI * u2);
+      },
+      nonneg: () => false,
+      mean: q => q.mu,
+      variance: q => q.sigma * q.sigma,
+      median: q => q.mu,
+      supportText: () => `(−∞, ∞)`,
+      pdfHTML: () => `${I("f")}(${x}) = ${frac(1, `${sg}√2π`)} ${I("e")}${sup(`−(${x}−${mu})²/2${sg}²`)}`,
+      cdfHTML: () => `${I("F")}(${x}) = Φ<span style="margin-left:.15em"></span>${frac(`${x} − ${mu}`, sg)}<br><span class="cond">where Φ is the standard normal CDF</span>`,
+      meanHTML: () => mu,
+      varHTML: () => `${sg}${sup(2)}`,
+      medianHTML: () => mu
+    }
+  };
+  const ALL = Object.assign({}, D, C);
+  const LIST_D = ["uniform", "bernoulli", "binomial", "geometric", "poisson", "hypergeometric"];
+  const LIST_C = ["cuniform", "exponential", "normal"];
+
+  // ---------- persistence ----------
+  try {
+    const sv = JSON.parse(localStorage.getItem("dde-state-v3") || "null");
+    if (sv) {
+      if (["explore", "bounds", "sim", "clt", "pp"].includes(sv.tab)) state.tab = sv.tab;
+      if (ALL[sv.dist]) state.dist = sv.dist;
+      if (sv.params) for (const key in state.params) if (sv.params[key]) Object.assign(state.params[key], sv.params[key]);
+      if (sv.geoMode === "trials" || sv.geoMode === "failures") state.geoMode = sv.geoMode;
+      if (typeof sv.showMean === "boolean") state.showMean = sv.showMean;
+      if (typeof sv.showSD === "boolean") state.showSD = sv.showSD;
+      if (sv.interval) Object.assign(state.interval, sv.interval);
+      if (sv.mem) for (const key in state.mem) if (sv.mem[key]) Object.assign(state.mem[key], sv.mem[key]);
+      if (sv.bounds) Object.assign(state.bounds, sv.bounds);
+      if (sv.clt) Object.assign(state.clt, sv.clt);
+      if (sv.pp) Object.assign(state.pp, sv.pp);
+    }
+  } catch (e) {}
+  const save = () => { try { localStorage.setItem("dde-state-v3", JSON.stringify(state)); } catch (e) {} };
+
+  // ---------- model ----------
+  function makeTable(d, q) {
+    const { lo, hi } = d.support(q);
+    const probs = [], cum = [], CAP = 50000;
+    function ensure(j) {
+      const target = Math.min(j, hi) - lo;
+      while (probs.length <= target && probs.length < CAP) {
+        const pr = d.pmf(lo + probs.length, q);
+        probs.push(pr); cum.push((cum.length ? cum[cum.length - 1] : 0) + pr);
+      }
+    }
+    const P = j => {
+      if (j < lo || j > hi || j !== Math.floor(j)) return 0;
+      ensure(j); const v = probs[j - lo]; return v === undefined ? 0 : v;
+    };
+    const F = t => {
+      const j = Math.floor(t);
+      if (j < lo) return 0;
+      if (j >= hi) return 1;
+      ensure(j); const v = cum[j - lo]; return v === undefined ? 1 : Math.min(1, v);
+    };
+    const Q = u => {
+      let j = lo;
+      while (j < hi && j - lo < CAP) { const Fj = F(j); if (Fj >= u || Fj >= 1 - 1e-13) break; j++; }
+      return j;
+    };
+    return { lo, hi, P, F, Q };
+  }
+
+  let model = null;
+  function computeModel() {
+    const key = state.dist, d = ALL[key], q = state.params[key];
+    const mean = d.mean(q), v = d.variance(q), sd = Math.sqrt(Math.max(0, v));
+    const m = { key, d, q, disc: d.family === "discrete", mean, v, sd };
+    if (m.disc) {
+      const T = makeTable(d, q);
+      m.T = T; m.f = T.P; m.F = T.F; m.Fminus = t => T.F(Math.ceil(t) - 1);
+      const qa = T.Q(0.0005), qb = Math.min(T.hi, T.Q(0.9995));
+      let peak = 0;
+      for (let j = qa; j <= qb; j++) peak = Math.max(peak, T.P(j));
+      const pad = Math.max(1.2, 0.06 * (qb - qa));
+      m.frame = { x0: qa - pad, x1: qb + pad, ymax: peak };
+      m.peak = peak; m.nonneg = T.lo >= 0;
+      m.sample = d.sample ? () => d.sample(q) : () => T.Q(Math.random());
+    } else {
+      m.f = t => d.pdf(t, q); m.F = t => d.cdf(t, q); m.Fminus = m.F;
+      m.frame = d.frame(q); m.peak = m.frame.ymax; m.median = d.median(q); m.nonneg = d.nonneg(q);
+      m.sample = () => d.sample(q);
+    }
+    const eps = 1e-9 * Math.max(1, Math.abs(mean));
+    m.within = m.F(mean + sd + eps) - m.Fminus(mean - sd - eps);
+    model = m;
+  }
+
+  // ---------- shared view (fixed axes, manual zoom / pan / fit) ----------
+  let view = null, tween = 0, pending = false;
+  const fitView = () => ({ x0: model.frame.x0, x1: model.frame.x1, ymax: niceTop(model.frame.ymax, model.disc ? 1 : null) });
+  const reduceMotion = () => { try { return matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) { return false; } };
+  function animateView(target) {
+    cancelAnimationFrame(tween);
+    if (!view || reduceMotion()) { view = target; redrawCharts(); return; }
+    const from = Object.assign({}, view), t0 = performance.now(), dur = 300;
+    const stepF = now => {
+      const u = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - u, 3);
+      view = { x0: from.x0 + (target.x0 - from.x0) * e, x1: from.x1 + (target.x1 - from.x1) * e, ymax: from.ymax + (target.ymax - from.ymax) * e };
+      redrawCharts();
+      if (u < 1) tween = requestAnimationFrame(stepF);
+    };
+    tween = requestAnimationFrame(stepF);
+  }
+  function scheduleRedraw() {
+    if (pending) return;
+    pending = true;
+    requestAnimationFrame(() => { pending = false; redrawCharts(); });
+  }
+  function zoomBy(f) {
+    const c = (view.x0 + view.x1) / 2;
+    const lim = model.disc ? [3, 1500] : [0.05, 10000];
+    const h = clamp((view.x1 - view.x0) / 2 * f, lim[0] / 2, lim[1] / 2);
+    animateView({ x0: c - h, x1: c + h, ymax: view.ymax });
+  }
+  function offscale() {
+    const out = model.Fminus(view.x0) + (1 - model.F(view.x1));
+    return out > 0.002 || model.peak > view.ymax * 1.001;
+  }
+  function updateZoomUI() {
+    const off = offscale();
+    document.querySelectorAll(".zoom:not(.pp)").forEach(z => {
+      z.querySelector(".fit").classList.toggle("attn", off);
+      z.querySelector(".offnote").hidden = !off;
+    });
+  }
+  document.addEventListener("click", e => {
+    const b = e.target.closest("[data-z]");
+    if (!b || !model) return;
+    if (b.dataset.z === "fit") animateView(fitView()); else zoomBy(b.dataset.z === "in" ? 1 / 1.6 : 1.6);
+  });
+
+  // ---------- controls: distribution, params ----------
+  function buildDistButtons() {
+    [["distD", LIST_D], ["distC", LIST_C]].forEach(([id, list]) => {
+      $(id).innerHTML = list.map(key => `<button type="button" data-d="${key}" aria-pressed="${key === state.dist}">${ALL[key].name}</button>`).join("");
+    });
+  }
+  ["distD", "distC"].forEach(id => $(id).addEventListener("click", e => {
+    const b = e.target.closest("button[data-d]");
+    if (!b || b.dataset.d === state.dist) return;
+    state.dist = b.dataset.d;
+    buildDistButtons(); buildParams(); onDistChanged();
+  }));
+
+  function clampParams() {
+    const d = ALL[state.dist], q = state.params[state.dist];
+    d.params.forEach(spec => {
+      let v = Number(q[spec.key]);
+      if (!isFinite(v)) v = spec.min;
+      v = Math.round(v / spec.step) * spec.step;
+      q[spec.key] = +clamp(v, spec.min, spec.max(q)).toFixed(4);
+    });
+  }
+  function buildParams() {
+    const key = state.dist, d = ALL[key], q = state.params[key];
+    clampParams();
+    if (d.fix) d.fix(q, "b");
+    $("params").innerHTML = d.params.map(spec => {
+      const id = `${key}-${spec.key}`, mx = spec.max(q);
+      return `<div class="param">
+        <label class="sym" for="${id}-n">${spec.sym}</label>
+        <input type="range" id="${id}-r" aria-label="${spec.sym} slider" min="${spec.min}" max="${mx}" step="${spec.step}" value="${q[spec.key]}">
+        <input type="number" id="${id}-n" min="${spec.min}" max="${mx}" step="${spec.step}" value="${q[spec.key]}">
+      </div>`;
+    }).join("");
+    d.params.forEach(spec => {
+      const id = `${key}-${spec.key}`, r = $(`${id}-r`), nI = $(`${id}-n`);
+      const set = (val, fromNumber) => {
+        if (fromNumber && (val === "" || val === "-" || isNaN(Number(val)))) return;
+        q[spec.key] = Number(val);
+        clampParams();
+        if (d.fix) d.fix(q, spec.key);
+        syncParamInputs(fromNumber ? nI : null);
+        onParamChanged();
+      };
+      r.addEventListener("input", () => set(r.value, false));
+      nI.addEventListener("input", () => set(nI.value, true));
+      nI.addEventListener("change", () => syncParamInputs(null));
+    });
+    $("geoMode").hidden = key !== "geometric";
+    syncGeoButtons();
+  }
+  function syncParamInputs(skip) {
+    const key = state.dist, d = ALL[key], q = state.params[key];
+    d.params.forEach(spec => {
+      const id = `${key}-${spec.key}`, r = $(`${id}-r`), nI = $(`${id}-n`), mx = spec.max(q);
+      r.max = mx; nI.max = mx; r.value = q[spec.key];
+      if (nI !== skip) nI.value = q[spec.key];
+    });
+  }
+  function syncGeoButtons() {
+    $("geoTrials").setAttribute("aria-pressed", state.geoMode === "trials");
+    $("geoFails").setAttribute("aria-pressed", state.geoMode === "failures");
+  }
+  ["geoTrials", "geoFails"].forEach(id => $(id).addEventListener("click", e => {
+    if (state.geoMode === e.currentTarget.dataset.mode) return;
+    state.geoMode = e.currentTarget.dataset.mode; syncGeoButtons();
+    computeModel(); renderText(); simReset(false); animateView(fitView()); save();
+  }));
+
+  function resetPerDist() {
+    const iv = state.interval;
+    if (iv.key !== state.dist) {
+      if (model.disc) {
+        iv.a = Math.max(model.T.lo, Math.round(model.mean - model.sd));
+        iv.b = Math.max(iv.a, Math.round(model.mean + model.sd));
+      } else {
+        iv.a = +(model.mean - model.sd).toFixed(2); iv.b = +(model.mean + model.sd).toFixed(2);
+      }
+      iv.key = state.dist;
+    }
+    const bd = state.bounds;
+    if (bd.key !== state.dist || !(bd.a > 0)) {
+      bd.a = model.mean > 0 ? +(2 * model.mean).toFixed(model.disc ? 1 : 2) : 1;
+      bd.key = state.dist;
+    }
+  }
+  function onDistChanged() {
+    computeModel(); resetPerDist(); renderText(); simReset(false); hover = null;
+    animateView(fitView()); save();
+  }
+  function onParamChanged() {
+    computeModel(); renderText(); simReset(false);
+    redrawCharts(); save();
+  }
+
+  // ---------- tabs ----------
+  const TABS = ["explore", "bounds", "sim", "clt", "pp"];
+  function selectTab(t) {
+    state.tab = t;
+    document.querySelector(".app").classList.toggle("solo", t === "pp");
+    TABS.forEach(name => {
+      const b = $(`tab-${name}`);
+      b.setAttribute("aria-selected", name === t);
+      b.tabIndex = name === t ? 0 : -1;
+      $(`pane-${name}`).hidden = name !== t;
+    });
+    if (t !== "sim") simStop();
+    redrawCharts(); save();
+  }
+  TABS.forEach((name, i) => {
+    const b = $(`tab-${name}`);
+    b.addEventListener("click", () => { if (state.tab !== name) selectTab(name); });
+    b.addEventListener("keydown", e => {
+      if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+      const j = (i + (e.key === "ArrowRight" ? 1 : TABS.length - 1)) % TABS.length;
+      $(`tab-${TABS[j]}`).focus(); selectTab(TABS[j]);
+    });
+  });
+
+  // ---------- side panel text ----------
+  function renderText() {
+    const { d, q, mean, v, sd, within, disc } = model;
+    $("notation").innerHTML = `${X} ~ ${d.name}(${d.sig(q)})`;
+    $("desc").innerHTML = d.desc(q);
+    $("formulaLabel").textContent = disc ? "PMF" : "PDF and CDF";
+    $("formula").innerHTML = disc ? d.pmfHTML() : `${d.pdfHTML()}<br>${d.cdfHTML()}`;
+    $("exTopTitle").textContent = disc ? "Probability mass function" : "Probability density function";
+    $("exCdfNote").innerHTML = disc
+      ? `Filled dots mark ${I("F")}(${k}); open dots mark the left limit. ${I("F")} is right-continuous and constant on each [${k}, ${k}+1).`
+      : `${I("F")} is continuous and ${I("F")}′(${x}) = ${I("f")}(${x}) wherever ${I("f")} is continuous. Hover the density to see the area ${I("F")}(${x}) shaded.`;
+    let supText;
+    if (disc) {
+      const { lo, hi } = model.T;
+      supText = hi === Infinity ? `{${lo}, ${lo + 1}, ${lo + 2}, …}` : hi - lo <= 3 ? `{${Array.from({ length: hi - lo + 1 }, (_, i) => lo + i).join(", ")}}` : `{${lo}, …, ${hi}}`;
+    } else supText = d.supportText(q);
+    $("moments").innerHTML = `
+      <dt>E[${X}]</dt><dd>${d.meanHTML()} <span class="eq">=</span> <span class="num">${fmt(mean)}</span></dd>
+      <dt>Var(${X})</dt><dd>${d.varHTML()} <span class="eq">=</span> <span class="num">${fmt(v)}</span></dd>
+      <dt>SD(${X})</dt><dd>√Var(${X}) <span class="eq">=</span> <span class="num">${fmt(sd)}</span></dd>
+      ${disc ? "" : `<dt>Median</dt><dd>${d.medianHTML()} <span class="eq">=</span> <span class="num">${fmt(model.median)}</span></dd>`}
+      <dt>P(|${X} − ${mu}| ≤ ${sg})</dt><dd><span class="num">${fmt(within)}</span></dd>
+      <dt>Support</dt><dd><span class="num">${supText}</span></dd>`;
+  }
+
+  // ---------- chart helpers ----------
+  const charts = {};
+  function geomFor(host, hSmall, hBig, m) {
+    const W = Math.max(300, host.clientWidth || 640), H = W < 560 ? hSmall : hBig;
+    return { W, H, m, iw: W - m.l - m.r, ih: H - m.t - m.b };
+  }
+  function svgOpen(id, g, label) {
+    return `<svg viewBox="0 0 ${g.W} ${g.H}" role="img" aria-label="${label}"><defs><clipPath id="clip-${id}"><rect x="${g.m.l}" y="${g.m.t - 2}" width="${g.iw}" height="${g.ih + 4}"/></clipPath></defs>`;
+  }
+  function yGrid(g, sy, ymax, fmtFn) {
+    const st = niceStep(ymax / 5), dec = decFor(st);
+    let s = "";
+    for (let i = 0; i * st <= ymax * 1.0001; i++) {
+      const y = i * st;
+      s += `<line class="grid" x1="${g.m.l}" x2="${g.W - g.m.r}" y1="${sy(y)}" y2="${sy(y)}"/>`;
+      s += `<g class="tick"><text x="${g.m.l - 8}" y="${sy(y) + 4}" text-anchor="end">${fmtFn ? fmtFn(y) : y.toFixed(dec)}</text></g>`;
+    }
+    return s;
+  }
+  function xTicks(x0, x1, iw, intOnly) {
+    const maxT = Math.max(3, Math.floor(iw / (intOnly ? 40 : 58)));
+    let st;
+    if (intOnly) st = [1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000].find(s => (x1 - x0) / s <= maxT) || 2000;
+    else st = niceStep((x1 - x0) / maxT);
+    const out = [];
+    for (let i = Math.ceil(x0 / st - 1e-9); i * st <= x1 + 1e-9; i++) out.push(+(i * st).toFixed(6));
+    return out;
+  }
+  function xAxisSvg(g, sx, sy0, x0, x1, intOnly, lab) {
+    let s = `<line class="axis" x1="${g.m.l}" x2="${g.W - g.m.r}" y1="${sy0}" y2="${sy0}"/>`;
+    xTicks(x0, x1, g.iw, intOnly).forEach(t => {
+      s += `<g class="tick"><line class="axis" x1="${sx(t)}" x2="${sx(t)}" y1="${sy0}" y2="${sy0 + 4}"/><text x="${sx(t)}" y="${sy0 + 18}" text-anchor="middle">${fmtP(t)}</text></g>`;
+    });
+    s += `<text class="axlab" x="${g.W - g.m.r}" y="${g.H - 2}" text-anchor="end">${lab}</text>`;
+    return s;
+  }
+  function viewScales(g, ymax) {
+    const { x0, x1 } = view;
+    const sx = t => g.m.l + (t - x0) / (x1 - x0) * g.iw;
+    const sy = y => g.m.t + g.ih - clamp(y, 0, ymax * 1.5) / ymax * g.ih;
+    return { sx, sy };
+  }
+  function drawBars(g, sx, sy, hfn, clsfn, widthFrac) {
+    const { x0, x1 } = view, T = model.T;
+    const unit = g.iw / (x1 - x0), bw = Math.max(1, Math.min(unit * (widthFrac || 0.72), 46));
+    const k0 = Math.max(T.lo, Math.ceil(x0 - 0.5)), k1 = Math.min(T.hi, Math.floor(x1 + 0.5));
+    const sy0 = sy(0);
+    let s = "";
+    for (let j = k0; j <= k1; j++) {
+      const h = Math.max(0, sy0 - sy(hfn(j)));
+      if (h <= 0) continue;
+      s += `<rect class="${clsfn(j)}" data-k="${j}" x="${(sx(j) - bw / 2).toFixed(2)}" y="${(sy0 - h).toFixed(2)}" width="${bw.toFixed(2)}" height="${h.toFixed(2)}" rx="${bw > 6 ? 1.5 : 0}"/>`;
+    }
+    return s;
+  }
+  // Density paths split at the jump points so discontinuities are drawn honestly.
+  function densityPaths(l, r, sx, sy, fn) {
+    const f = fn || model.f;
+    let line = "", area = "";
+    if (!(r > l)) return { line, area };
+    const span = view.x1 - view.x0;
+    const br = fn ? [] : model.d.breaks(model.q).filter(b => b > l && b < r).sort((a, b) => a - b);
+    const pts = [l, ...br, r];
+    for (let i = 1; i < pts.length; i++) {
+      const a = pts[i - 1], b = pts[i];
+      const N = Math.max(8, Math.ceil(360 * (b - a) / span)), eps = (b - a) * 1e-7;
+      const arr = [];
+      for (let j = 0; j <= N; j++) {
+        const t = a + (b - a) * j / N, te = j === 0 ? a + eps : j === N ? b - eps : t;
+        arr.push(`${sx(t).toFixed(2)} ${sy(f(te)).toFixed(2)}`);
+      }
+      const body = arr.join(" L");
+      line += `M${body} `;
+      area += `M${sx(a).toFixed(2)} ${sy(0).toFixed(2)} L${body} L${sx(b).toFixed(2)} ${sy(0).toFixed(2)} Z `;
+    }
+    return { line, area };
+  }
+  function jumpsSvg(sx, sy) {
+    if (model.disc) return "";
+    const { x0, x1 } = view, eps = (x1 - x0) * 1e-7;
+    return model.d.breaks(model.q).filter(b => b > x0 && b < x1).map(b =>
+      `<line class="jump" x1="${sx(b)}" x2="${sx(b)}" y1="${sy(model.f(b - eps))}" y2="${sy(model.f(b + eps))}"/>`).join("");
+  }
+  function sdBand(g, sx, sy0) {
+    const { mean, sd } = model, { x0, x1 } = view;
+    const a = clamp(mean - sd, x0, x1), b = clamp(mean + sd, x0, x1);
+    let s = `<rect class="band" x="${sx(a)}" y="${g.m.t}" width="${Math.max(0, sx(b) - sx(a))}" height="${sy0 - g.m.t}"/>`;
+    if (mean - sd >= x0 && mean - sd <= x1) s += `<line class="bandedge" x1="${sx(mean - sd)}" x2="${sx(mean - sd)}" y1="${g.m.t}" y2="${sy0}"/>`;
+    if (mean + sd >= x0 && mean + sd <= x1) s += `<line class="bandedge" x1="${sx(mean + sd)}" x2="${sx(mean + sd)}" y1="${g.m.t}" y2="${sy0}"/>`;
+    return s;
+  }
+  function labelX(g, xp, half) {
+    if (xp - half < g.m.l) return [Math.max(g.m.l, xp - 6), "start"];
+    if (xp + half > g.W - g.m.r) return [Math.min(g.W - g.m.r, xp + 6), "end"];
+    return [xp, "middle"];
+  }
+  function bracket(g, sx, a, b, yb, text, cls, labCls) {
+    const { x0, x1 } = view;
+    const A = clamp(a, x0, x1), B = clamp(b, x0, x1);
+    let s = `<path class="${cls}" d="M${sx(A)} ${yb - 4} V${yb + 4} M${sx(A)} ${yb} H${sx(B)} M${sx(B)} ${yb - 4} V${yb + 4}"/>`;
+    const [lx, anchor] = labelX(g, sx((A + B) / 2), 50);
+    s += `<text class="${labCls}" x="${lx}" y="${yb - 7}" text-anchor="${anchor}">${text}</text>`;
+    return s;
+  }
+  function meanMark(g, sx, sy0, topY) {
+    const { mean } = model, { x0, x1 } = view;
+    if (mean < x0 || mean > x1) return "";
+    const xm = sx(mean);
+    let s = `<line class="meanline" x1="${xm}" x2="${xm}" y1="${topY}" y2="${sy0}"/>`;
+    s += `<path class="meanmark" d="M${xm - 5} ${sy0 + 1} L${xm + 5} ${sy0 + 1} L${xm} ${sy0 - 6} Z"/>`;
+    const [lx, anchor] = labelX(g, xm, 40);
+    s += `<text class="meanlab" x="${lx}" y="14" text-anchor="${anchor}">μ = ${fmt(mean, 3)}</text>`;
+    return s;
+  }
+  function vline(g, sx, xv, sy0, cls, label, labCls, labY) {
+    const { x0, x1 } = view;
+    if (xv < x0 || xv > x1) return "";
+    let s = `<line class="${cls}" x1="${sx(xv)}" x2="${sx(xv)}" y1="${g.m.t - 4}" y2="${sy0}"/>`;
+    if (label) {
+      const [lx, anchor] = labelX(g, sx(xv), 16);
+      s += `<text class="${labCls}" x="${lx}" y="${labY}" text-anchor="${anchor}">${label}</text>`;
+    }
+    return s;
+  }
+
+  // Pointer handling lives on the persistent chart container, so redraws never drop a drag.
+  function bindChart(id, opt) {
+    const host = $(id);
+    let down = null, panning = false;
+    const toX = e => {
+      const c = charts[id]; if (!c) return null;
+      const r = host.getBoundingClientRect();
+      const px = (e.clientX - r.left) / r.width * c.g.W;
+      return c.x0 + (px - c.g.m.l) / c.g.iw * (c.x1 - c.x0);
+    };
+    host.addEventListener("pointerdown", e => {
+      if (e.pointerType === "mouse" && e.button !== 0) return;
+      down = { cx: e.clientX, v: Object.assign({}, view) };
+      panning = false;
+      if (opt.drag) { try { host.setPointerCapture(e.pointerId); } catch (err) {} opt.drag(toX(e)); return; }
+      if (opt.hover) opt.hover(toX(e));
+    });
+    host.addEventListener("pointermove", e => {
+      if (down && opt.drag) { opt.drag(toX(e)); return; }
+      if (down && opt.pan && (panning || Math.abs(e.clientX - down.cx) > 5)) {
+        if (!panning) {
+          panning = true; cancelAnimationFrame(tween);
+          try { host.setPointerCapture(e.pointerId); } catch (err) {}
+          host.classList.add("panning");
+          if (opt.leave) opt.leave();
+        }
+        const c = charts[id], r = host.getBoundingClientRect();
+        const dx = (e.clientX - down.cx) / r.width * c.g.W / c.g.iw * (down.v.x1 - down.v.x0);
+        view = { x0: down.v.x0 - dx, x1: down.v.x1 - dx, ymax: view.ymax };
+        scheduleRedraw();
+        return;
+      }
+      if (!down && opt.hover && e.pointerType === "mouse") opt.hover(toX(e));
+    });
+    const end = () => { if (panning) host.classList.remove("panning"); down = null; panning = false; };
+    host.addEventListener("pointerup", end);
+    host.addEventListener("pointercancel", end);
+    host.addEventListener("pointerleave", e => { if (e.pointerType === "mouse" && !down && opt.leave) opt.leave(); });
+  }
+
+  // =================== EXPLORE ===================
+  let hover = null;
+  function intervalInfo() {
+    const iv = state.interval;
+    if (!iv.on) return null;
+    const loInc = iv.ends[0] === "i", hiInc = iv.ends[1] === "i", a = iv.a, b = iv.b;
+    if (model.disc) {
+      const loK = loInc ? Math.ceil(a) : Math.floor(a) + 1, hiK = hiInc ? Math.floor(b) : Math.ceil(b) - 1;
+      const Fhi = model.F(hiK), Flo = model.F(loK - 1);
+      return { a, b, loInc, hiInc, loK, hiK, Fhi, Flo, prob: hiK < loK ? 0 : Math.max(0, Fhi - Flo), inside: j => j >= loK && j <= hiK, xl: loK - 1, xr: hiK };
+    }
+    const Fhi = model.F(b), Flo = model.F(a);
+    return { a, b, loInc, hiInc, Fhi, Flo, prob: Math.max(0, Fhi - Flo), xl: a, xr: b };
+  }
+
+  function drawExTop() {
+    const host = $("exTop"), g = geomFor(host, 270, 320, { l: 52, r: 14, t: 56, b: 34 });
+    const { ymax } = view, { sx, sy } = viewScales(g, ymax), sy0 = sy(0);
+    const iv = intervalInfo();
+    let s = svgOpen("exTop", g, model.disc ? "Bar chart of the probability mass function" : "Curve of the probability density function");
+    s += yGrid(g, sy, ymax);
+    if (state.showSD) s += sdBand(g, sx, sy0);
+    s += `<g clip-path="url(#clip-exTop)">`;
+    if (model.disc) {
+      s += drawBars(g, sx, sy, model.f, j => "bar" + (iv ? (iv.inside(j) ? " ev" : " dim") : ""));
+    } else {
+      const all = densityPaths(view.x0, view.x1, sx, sy);
+      s += `<path class="area" d="${all.area}"/>`;
+      if (iv) s += `<path class="evarea" d="${densityPaths(Math.max(view.x0, iv.a), Math.min(view.x1, iv.b), sx, sy).area}"/>`;
+      s += `<path class="shade" id="exShade" d=""/><path class="curve" d="${all.line}"/>` + jumpsSvg(sx, sy);
+      s += `<line class="guide" id="exGuide" visibility="hidden"/><circle class="hdot" id="exDot" r="4" visibility="hidden"/>`;
+    }
+    s += `</g>`;
+    if (iv) {
+      const L = model.disc ? iv.loK - 0.5 : iv.a, R = model.disc ? iv.hiK + 0.5 : iv.b;
+      if (!model.disc || iv.hiK >= iv.loK) {
+        s += vline(g, sx, L, sy0, "evline", "a", "evlab", g.m.t + 12);
+        s += vline(g, sx, R, sy0, "evline", "b", "evlab", g.m.t + 12);
+      }
+    }
+    s += xAxisSvg(g, sx, sy0, view.x0, view.x1, model.disc, model.disc ? "k" : "x");
+    if (state.showSD) s += bracket(g, sx, model.mean - model.sd, model.mean + model.sd, 40, `σ = ${fmt(model.sd, 3)}`, "sdline", "sdlab");
+    if (state.showMean) s += meanMark(g, sx, sy0, state.showSD ? 46 : 20);
+    s += `</svg>`;
+    host.innerHTML = s;
+    charts.exTop = { g, x0: view.x0, x1: view.x1, sx, sy };
+  }
+
+  function drawExCdf() {
+    const host = $("exCdf"), g = geomFor(host, 230, 270, { l: 52, r: 14, t: 14, b: 34 });
+    const { x0, x1 } = view;
+    const sx = t => g.m.l + (t - x0) / (x1 - x0) * g.iw, sy = y => g.m.t + g.ih - y * g.ih;
+    const iv = intervalInfo();
+    let s = svgOpen("exCdf", g, "Plot of the cumulative distribution function");
+    [0, 0.25, 0.5, 0.75, 1].forEach(y => {
+      s += `<line class="grid" x1="${g.m.l}" x2="${g.W - g.m.r}" y1="${sy(y)}" y2="${sy(y)}"/>`;
+      s += `<g class="tick"><text x="${g.m.l - 8}" y="${sy(y) + 4}" text-anchor="end">${y.toFixed(2)}</text></g>`;
+    });
+    s += xAxisSvg(g, sx, sy(0), x0, x1, model.disc, "x");
+    s += `<g clip-path="url(#clip-exCdf)">`;
+    let ringR = 5;
+    if (model.disc) {
+      const T = model.T, unit = g.iw / (x1 - x0), r = Math.min(4, unit * 0.28), dots = r > 1.2;
+      ringR = Math.max(5, r + 3);
+      const k0 = Math.max(T.lo, Math.ceil(x0)), k1 = Math.min(T.hi, Math.floor(x1));
+      let d = "", jumps = "", circ = "", px = x0, pF = model.F(x0);
+      for (let j = k0; j <= k1; j++) {
+        const Fk = model.F(j), Fl = model.F(j - 1), jump = Fk - Fl > 1e-9;
+        d += `M${sx(px).toFixed(2)} ${sy(pF).toFixed(2)} H${(sx(j) - (jump && dots ? r : 0)).toFixed(2)} `;
+        if (jump) {
+          jumps += `<line class="jump" x1="${sx(j)}" x2="${sx(j)}" y1="${sy(Fl)}" y2="${sy(Fk)}"/>`;
+          if (dots) circ += `<circle class="odot" cx="${sx(j)}" cy="${sy(Fl)}" r="${r}"/><circle class="dot" cx="${sx(j)}" cy="${sy(Fk)}" r="${r}"/>`;
+        }
+        px = j; pF = Fk;
+      }
+      d += `M${sx(px).toFixed(2)} ${sy(pF).toFixed(2)} H${sx(x1).toFixed(2)}`;
+      s += jumps + `<path class="step" d="${d}"/>` + circ;
+    } else {
+      const N = 400, pts = [];
+      for (let i = 0; i <= N; i++) { const t = x0 + (x1 - x0) * i / N; pts.push(`${sx(t).toFixed(2)} ${sy(model.F(t)).toFixed(2)}`); }
+      s += `<path class="curve" d="M${pts.join(" L")}"/>`;
+    }
+    s += `</g>`;
+    if (iv) {
+      const xr = clamp(sx(iv.xr), g.m.l, g.W - g.m.r), xl = clamp(sx(iv.xl), g.m.l, g.W - g.m.r);
+      const yH = sy(iv.Fhi), yL = sy(iv.Flo);
+      const bx = clamp(Math.max(xr, xl) + 16, g.m.l + 10, g.W - g.m.r - 64);
+      s += `<line class="evline" x1="${g.m.l}" x2="${bx}" y1="${yH}" y2="${yH}"/><line class="evline" x1="${g.m.l}" x2="${bx}" y1="${yL}" y2="${yL}"/>`;
+      s += `<path class="evline solid" d="M${bx - 4} ${yH} H${bx + 4} M${bx} ${yH} V${yL} M${bx - 4} ${yL} H${bx + 4}"/>`;
+      s += `<circle class="evdot" cx="${xr}" cy="${yH}" r="3.5"/><circle class="evdot" cx="${xl}" cy="${yL}" r="3.5"/>`;
+      s += `<text class="evnum" x="${bx + 8}" y="${(yH + yL) / 2 + 4}">${fmt(iv.prob)}</text>`;
+    }
+    s += `<circle class="ring" id="cdfRing" r="${ringR}" visibility="hidden"/><line class="guide" id="cdfGuideV" visibility="hidden"/><line class="guide" id="cdfGuideH" visibility="hidden"/>`;
+    s += `</svg>`;
+    host.innerHTML = s;
+    charts.exCdf = { g, x0, x1, sx, sy };
+  }
+
+  function renderInterval() {
+    const iv = intervalInfo();
+    $("intBox").hidden = !iv;
+    document.querySelectorAll("#intEnds button").forEach(b => b.setAttribute("aria-pressed", b.dataset.e === state.interval.ends));
+    if (!iv) return;
+    const lo = iv.loInc ? "≤" : "&lt;", hi = iv.hiInc ? "≤" : "&lt;";
+    const F = I("F");
+    if (model.disc) {
+      const head = `P(${fmtP(iv.a)} ${lo} ${X} ${hi} ${fmtP(iv.b)})`;
+      if (iv.hiK < iv.loK) { $("intResult").innerHTML = `${head} = <b>0</b><span class="small">No integers fall in this interval.</span>`; return; }
+      $("intResult").innerHTML = `${head} = ${F}(${iv.hiK}) − ${F}(${iv.loK - 1}) = ${fmt(iv.Fhi)} − ${fmt(iv.Flo)} = <b>${fmt(iv.prob)}</b>
+        <span class="small">For integer-valued ${X}: a strict “&lt; ${I("b")}” stops at ${I("b")} − 1, and “≥ ${I("a")}” starts by subtracting ${F}(${I("a")} − 1).</span>`;
+    } else {
+      $("intResult").innerHTML = `P(${fmtP(iv.a)} ${lo} ${X} ${hi} ${fmtP(iv.b)}) = ${F}(${fmtP(iv.b)}) − ${F}(${fmtP(iv.a)}) = ${fmt(iv.Fhi)} − ${fmt(iv.Flo)} = <b>${fmt(iv.prob)}</b>
+        <span class="small">For a continuous ${X}, single points have probability 0, so all four endpoint choices give the same answer.</span>`;
+    }
+  }
+
+  function applyExHover() {
+    const top = charts.exTop, c = charts.exCdf;
+    if (!top || !c) return;
+    const topSvg = $("exTop").firstChild;
+    if (topSvg) topSvg.querySelectorAll(".bar.hi").forEach(b => b.classList.remove("hi"));
+    const gv = $("cdfGuideV"), gh = $("cdfGuideH"), ring = $("cdfRing");
+    const shade = $("exShade"), guide = $("exGuide"), dot = $("exDot");
+    const show = (els, on) => els.forEach(el => el && el.setAttribute("visibility", on ? "visible" : "hidden"));
+    const setLine = (el, a, b, c2, d) => { el.setAttribute("x1", a); el.setAttribute("y1", b); el.setAttribute("x2", c2); el.setAttribute("y2", d); };
+    if (!hover) {
+      show([gv, gh, ring, guide, dot], false);
+      if (shade) shade.setAttribute("d", "");
+      if (model.disc) {
+        $("exTopReadout").innerHTML = `Hover or tap a bar to read P(${X} = ${k})`;
+        $("exCdfReadout").innerHTML = `Hover or tap to read ${I("F")}(${x}) = P(${X} ≤ ${x})`;
+      } else {
+        $("exTopReadout").innerHTML = `Hover or tap to read ${I("f")}(${x}) and shade P(${X} ≤ ${x})`;
+        $("exCdfReadout").innerHTML = `Hover or tap to read ${I("F")}(${x}) = P(${X} ≤ ${x})`;
+      }
+      return;
+    }
+    const inView = t => t >= view.x0 && t <= view.x1;
+    if (model.disc) {
+      const j = hover.k, F = model.F(j);
+      const bar = topSvg && topSvg.querySelector(`.bar[data-k="${j}"]`);
+      if (bar) bar.classList.add("hi");
+      $("exTopReadout").innerHTML = `P(${X} = ${j}) = <b>${fmt(model.f(j))}</b>`;
+      $("exCdfReadout").innerHTML = `${I("F")}(${j}) = P(${X} ≤ ${j}) = <b>${fmt(F)}</b>`;
+      if (inView(j)) {
+        const Xp = c.sx(j), Yp = c.sy(F);
+        setLine(gv, Xp, c.sy(0), Xp, Yp); setLine(gh, c.g.m.l, Yp, Xp, Yp);
+        ring.setAttribute("cx", Xp); ring.setAttribute("cy", Yp);
+        show([gv, gh, ring], true);
+      } else show([gv, gh, ring], false);
+    } else {
+      const t = clamp(hover.x, view.x0, view.x1), f = model.f(t), F = model.F(t), tl = fmt(t, 2);
+      $("exTopReadout").innerHTML = `${I("f")}(${tl}) = <b>${fmt(f)}</b> · shaded area <b>${fmt(F)}</b>`;
+      $("exCdfReadout").innerHTML = `${I("F")}(${tl}) = P(${X} ≤ ${tl}) = <b>${fmt(F)}</b>`;
+      if (shade) shade.setAttribute("d", densityPaths(view.x0, t, top.sx, top.sy).area);
+      setLine(guide, top.sx(t), top.sy(0), top.sx(t), top.sy(f));
+      dot.setAttribute("cx", top.sx(t)); dot.setAttribute("cy", top.sy(f));
+      const Xp = c.sx(t), Yp = c.sy(F);
+      setLine(gv, Xp, c.sy(0), Xp, Yp); setLine(gh, c.g.m.l, Yp, Xp, Yp);
+      ring.setAttribute("cx", Xp); ring.setAttribute("cy", Yp);
+      show([gv, gh, ring, guide, dot], true);
+    }
+  }
+  function exHover(xd, which) {
+    if (xd === null || xd === undefined) { hover = null; applyExHover(); return; }
+    hover = model.disc ? { k: which === "top" ? Math.round(xd) : Math.floor(xd) } : { x: xd };
+    applyExHover();
+  }
+
+  // ----- memorylessness -----
+  function memInfo() {
+    const key = model.key;
+    if (key !== "geometric" && key !== "exponential") return null;
+    const ms = state.mem[key], fails = key === "geometric" && state.geoMode === "failures";
+    const tailP = v => fails ? 1 - model.Fminus(v) : 1 - model.F(v);
+    const inEv = (v, c) => fails ? v >= c : v > c;
+    const s0 = ms.s, t0 = ms.t;
+    return { key, s0, t0, fails, rel: fails ? "≥" : ">", tailP, inEv, A: tailP(s0 + t0), B: tailP(s0), Cc: tailP(t0) };
+  }
+  function drawMem() {
+    const mi = memInfo();
+    $("memCard").hidden = !mi;
+    if (!mi) return;
+    const { s0, t0, rel, inEv, A, B, Cc, fails } = mi;
+    const S = I("s"), Tt = I("t");
+    $("memStatement").innerHTML = `P(${X} ${rel} ${S} + ${Tt} | ${X} ${rel} ${S}) = P(${X} ${rel} ${Tt})`;
+    $("memDesc").innerHTML = mi.key === "exponential"
+      ? `Having already waited ${S} without an event, the remaining wait is again Exponential(${lam}). The conditional density of ${X} given ${X} &gt; ${S} is the original density slid right by ${S}.`
+      : fails
+        ? `Given at least ${S} failures so far, the number of further failures is again Geometric(${p}). The conditional PMF of ${X} given ${X} ≥ ${S} is the original PMF slid right by ${S}.`
+        : `Given that the first ${S} trials all failed, the number of further trials needed is again Geometric(${p}). The conditional PMF of ${X} given ${X} &gt; ${S} is the original PMF slid right by ${S}.`;
+
+    const host = $("memChart"), g = geomFor(host, 250, 290, { l: 52, r: 14, t: 34, b: 34 });
+    const { ymax } = view, { sx, sy } = viewScales(g, ymax), sy0 = sy(0);
+    let s = svgOpen("memChart", g, "Memorylessness: conditional distribution compared with the shifted original");
+    s += yGrid(g, sy, ymax);
+    s += `<g clip-path="url(#clip-memChart)">`;
+    const ok = B > 1e-15;
+    if (model.disc) {
+      s += drawBars(g, sx, sy, model.f, j => "bar " + (inEv(j, t0) ? "tailo" : "faint"), 0.8);
+      if (ok) {
+        s += drawBars(g, sx, sy, j => inEv(j, s0) ? model.f(j) / B : 0, j => "mcond" + (inEv(j, s0 + t0) ? " tail" : ""), 0.42);
+        const k0 = Math.max(Math.ceil(view.x0), s0), k1 = Math.floor(view.x1);
+        for (let j = k0; j <= k1 && j - k0 < 2000; j++) {
+          if (!inEv(j, s0)) continue;
+          const v = model.f(j - s0);
+          if (v > 0) s += `<circle class="shiftdot" cx="${sx(j)}" cy="${sy(v)}" r="3.5"/>`;
+        }
+      }
+    } else {
+      const all = densityPaths(view.x0, view.x1, sx, sy);
+      s += `<path class="area faint" d="${all.area}"/>`;
+      s += `<path class="tailarea" d="${densityPaths(Math.max(view.x0, t0), view.x1, sx, sy).area}"/>`;
+      s += `<path class="curve faintline" d="${all.line}"/>`;
+      if (ok) {
+        const cf = t => t > s0 ? model.f(t) / B : 0;
+        s += `<path class="evarea" d="${densityPaths(Math.max(view.x0, s0 + t0), view.x1, sx, sy, cf).area}"/>`;
+        s += `<path class="mcurve" d="${densityPaths(Math.max(view.x0, s0), view.x1, sx, sy, cf).line}"/>`;
+        s += `<path class="shiftline" d="${densityPaths(Math.max(view.x0, s0), view.x1, sx, sy, t => model.f(t - s0)).line}"/>`;
+      }
+    }
+    s += `</g>`;
+    const off = model.disc ? (fails ? -0.5 : 0.5) : 0;
+    s += vline(g, sx, t0 + off, sy0, "tline", "t", "tlab", g.m.t - 10);
+    s += vline(g, sx, s0 + off, sy0, "evline", "s", "evlab", g.m.t - 10);
+    s += vline(g, sx, s0 + t0 + off, sy0, "evline solid", "s + t", "evlab", g.m.t - 10);
+    s += xAxisSvg(g, sx, sy0, view.x0, view.x1, model.disc, model.disc ? "k" : "x");
+    s += `</svg>`;
+    host.innerHTML = s;
+    charts.memChart = { g, x0: view.x0, x1: view.x1, sx, sy };
+
+    const what = model.disc ? "PMF" : "density";
+    $("memLegend").innerHTML = `
+      <span><i class="sw" style="background:var(--bar);opacity:.3"></i>Original ${what}; darker part is P(${X} ${rel} ${Tt})</span>
+      <span><i class="sw" style="background:var(--ev);opacity:.6"></i>Conditional on ${X} ${rel} ${S}; darker part is P(${X} ${rel} ${S} + ${Tt} | ${X} ${rel} ${S})</span>
+      <span>${model.disc ? `<i class="sw dot"></i>` : `<i class="sw line"></i>`}Original ${what} shifted right by ${S}</span>`;
+    const st = fmtP(s0 + t0);
+    $("memResult").innerHTML = ok
+      ? `P(${X} ${rel} ${st} | ${X} ${rel} ${fmtP(s0)}) = ${frac(`P(${X} ${rel} ${st})`, `P(${X} ${rel} ${fmtP(s0)})`)} = ${frac(fmt(A), fmt(B))} = <b>${fmt(A / B)}</b>
+         <br>P(${X} ${rel} ${fmtP(t0)}) = <b>${fmt(Cc)}</b>
+         <span class="small">${Math.abs(A / B - Cc) < 5e-7 ? "The two probabilities agree, as memorylessness says they must." : ""}</span>`
+      : `<span class="small">P(${X} ${rel} ${fmtP(s0)}) = 0, so there is nothing to condition on. Lower ${S} or ${p}.</span>`;
+  }
+
+  function drawExplore() {
+    drawExTop(); drawExCdf(); renderInterval(); drawMem(); applyExHover();
+  }
+
+  // explore controls
+  $("tMean").addEventListener("change", e => { state.showMean = e.target.checked; save(); redrawCharts(); });
+  $("tSD").addEventListener("change", e => { state.showSD = e.target.checked; save(); redrawCharts(); });
+  $("tInt").addEventListener("change", e => { state.interval.on = e.target.checked; if (state.interval.key !== state.dist) resetPerDist(); save(); redrawCharts(); });
+  $("intEnds").addEventListener("click", e => {
+    const b = e.target.closest("button[data-e]"); if (!b) return;
+    state.interval.ends = b.dataset.e; save(); redrawCharts();
+  });
+  function bindPair(base, onVal) {
+    const r = $(`${base}-r`), nI = $(`${base}-n`);
+    r.addEventListener("input", () => onVal(Number(r.value)));
+    nI.addEventListener("input", () => { const v = nI.value; if (v === "" || v === "-" || isNaN(Number(v))) return; onVal(Number(v)); });
+    nI.addEventListener("change", () => redrawCharts());
+  }
+  const roundTo = (v, st) => +(Math.round(v / st) * st).toFixed(6);
+  const contStep = () => niceStep((view.x1 - view.x0) / 200);
+  bindPair("intA", v => { const iv = state.interval; iv.a = model.disc ? Math.round(v) : +v.toFixed(4); if (iv.a > iv.b) iv.b = iv.a; save(); redrawCharts(); });
+  bindPair("intB", v => { const iv = state.interval; iv.b = model.disc ? Math.round(v) : +v.toFixed(4); if (iv.b < iv.a) iv.a = iv.b; save(); redrawCharts(); });
+  bindPair("memS", v => { const ms = state.mem[model.key]; if (!ms) return; ms.s = Math.max(0, model.disc ? Math.round(v) : +v.toFixed(4)); save(); redrawCharts(); });
+  bindPair("memT", v => { const ms = state.mem[model.key]; if (!ms) return; ms.t = Math.max(0, model.disc ? Math.round(v) : +v.toFixed(4)); save(); redrawCharts(); });
+
+  function setRange(base, min, max, step, val) {
+    const r = $(`${base}-r`), nI = $(`${base}-n`);
+    r.min = min; r.max = max; r.step = step; r.value = val;
+    nI.step = step;
+    if (document.activeElement !== nI) nI.value = fmtP(val).replace("−", "-");
+  }
+  function syncViewControls() {
+    const disc = model.disc;
+    const st = disc ? 1 : contStep();
+    const lo = disc ? Math.ceil(view.x0) : Math.floor(view.x0 / st) * st;
+    const hi = disc ? Math.floor(view.x1) : Math.ceil(view.x1 / st) * st;
+    if (state.tab === "explore") {
+      const iv = state.interval;
+      if (iv.on) {
+        setRange("intA", Math.min(lo, iv.a), Math.max(hi, iv.a), st, iv.a);
+        setRange("intB", Math.min(lo, iv.b), Math.max(hi, iv.b), st, iv.b);
+      }
+      const ms = state.mem[model.key];
+      if (ms) {
+        setRange("memS", 0, Math.max(hi, ms.s, 1), st, ms.s);
+        setRange("memT", 0, Math.max(hi, ms.t, 1), st, ms.t);
+      }
+    } else if (state.tab === "bounds") {
+      const bd = state.bounds;
+      if (bd.kind === "markov") {
+        const mst = niceStep(Math.max(view.x1, 0.5) / 300);
+        setRange("bdV", mst, Math.max(Math.ceil(view.x1 / mst) * mst, bd.a, mst * 2), mst, bd.a);
+      } else setRange("bdV", 0.1, 6, 0.05, bd.k);
+    } else if (state.tab === "clt") {
+      setRange("cltN", 1, CLT_NMAX, 1, state.clt.n);
+    } else if (state.tab === "pp") {
+      const P = state.pp;
+      setRange("ppL", 0.2, 5, 0.1, P.lam);
+      setRange("ppT", 2, 40, 1, P.T);
+      setRange("ppS", 0, P.T, 0.1, P.s);
+      setRange("ppW", 0.1, P.T, 0.1, P.w);
+    }
+  }
+
+  // =================== BOUNDS ===================
+  function boundsInfo() {
+    const bd = state.bounds, mk = bd.kind === "markov";
+    if (mk) {
+      const a = bd.a;
+      return { mk, valid: model.nonneg, a, exact: clamp(1 - model.Fminus(a), 0, 1), bound: model.mean / a };
+    }
+    if (!(model.sd > 0)) return { mk, degenerate: true };
+    const c = bd.k * model.sd;
+    return { mk, c, k: bd.k, exact: chebExact(bd.k), bound: 1 / (bd.k * bd.k) };
+  }
+  function chebExact(kk) {
+    const c = kk * model.sd, eps = 1e-9 * Math.max(1, Math.abs(model.mean), model.sd);
+    return clamp(model.F(model.mean - c + eps) + 1 - model.Fminus(model.mean + c - eps), 0, 1);
+  }
+  function renderBounds() {
+    const bd = state.bounds, mk = bd.kind === "markov";
+    document.querySelectorAll("#bdKind button").forEach(b => b.setAttribute("aria-pressed", b.dataset.k === bd.kind));
+    $("bdStatement").innerHTML = mk
+      ? `P(${X} ≥ ${I("a")}) ≤ ${frac(`E[${X}]`, I("a"))}`
+      : `P(|${X} − ${mu}| ≥ ${k}${sg}) ≤ ${frac(1, `${k}${sup(2)}`)}`;
+    $("bdDesc").innerHTML = mk
+      ? `Markov's inequality holds for any nonnegative ${X} and any ${I("a")} &gt; 0. It uses only the mean.`
+      : `Chebyshev's inequality holds for any ${X} with finite variance and any ${k} &gt; 0. It uses only the mean and standard deviation.`;
+    $("bdSym").textContent = mk ? "a" : "k";
+    $("bdCurveTitle").textContent = mk ? "P(X ≥ a) and E[X]/a as a varies" : "P(|X − μ| ≥ kσ) and 1/k² as k varies";
+    const info = boundsInfo();
+    const msg = $("bdMsg");
+    let showCmp = true;
+    if (mk && !info.valid) {
+      msg.hidden = false;
+      msg.innerHTML = `Markov's inequality needs ${X} ≥ 0. ${X} ~ ${model.d.name}(${model.d.sig(model.q)}) can be negative, so E[${X}]/${I("a")} is not a valid bound here. Switch to Chebyshev, or pick a nonnegative distribution.`;
+    } else if (!mk && info.degenerate) {
+      msg.hidden = false; showCmp = false;
+      msg.innerHTML = `Here ${sg} = 0, so ${X} is constant and Chebyshev's inequality has nothing to say.`;
+    } else msg.hidden = true;
+    $("bdCmp").hidden = !showCmp; $("bdMeterWrap").hidden = !showCmp;
+    document.querySelector(".meter-scale").hidden = !showCmp;
+    $("bdVerdict").hidden = !showCmp;
+    if (showCmp) {
+      $("bdExact").textContent = fmtS(info.exact);
+      if (mk) {
+        $("bdExactSub").textContent = `P(X ≥ ${fmtP(info.a)})`;
+        if (info.valid) {
+          $("bdBound").textContent = fmt(info.bound);
+          $("bdBoundSub").textContent = `E[X]/a = ${fmt(model.mean, 3)} / ${fmtP(info.a)}`;
+        } else { $("bdBound").textContent = "—"; $("bdBoundSub").textContent = "not valid for this X"; }
+      } else {
+        $("bdExactSub").textContent = `P(|X − ${fmt(model.mean, 3)}| ≥ ${fmt(info.c, 3)})\nkσ = ${fmtP(info.k)} × ${fmt(model.sd, 3)}`;
+        $("bdBound").textContent = fmt(info.bound);
+        $("bdBoundSub").textContent = `1/k² = 1/${fmtP(info.k)}²`;
+      }
+      $("bdFill").style.width = `${info.exact * 100}%`;
+      const valid = !mk || info.valid;
+      $("bdMark").hidden = !valid;
+      $("bdMark").style.left = `${clamp(info.bound, 0, 1) * 100}%`;
+      let v = "";
+      if (!valid) v = "";
+      else if (info.bound >= 1) v = `The bound is at least 1, so at this threshold it says nothing beyond “probability ≤ 1.”`;
+      else if (info.exact <= 0) v = `The exact probability is 0 here, so the bound is loose by its whole value.`;
+      else v = `The bound is <b>${fmtR(info.bound / info.exact)}×</b> the exact probability.`;
+      $("bdVerdict").innerHTML = v;
+    }
+    drawBdTop(info); drawBdCurve(info);
+  }
+  function drawBdTop(info) {
+    const host = $("bdTop"), g = geomFor(host, 260, 300, { l: 52, r: 14, t: 56, b: 34 });
+    const { ymax } = view, { sx, sy } = viewScales(g, ymax), sy0 = sy(0);
+    const mk = info.mk, eps = 1e-9 * Math.max(1, Math.abs(model.mean), model.sd);
+    const ev = mk ? (t => t >= info.a) : info.degenerate ? (() => false) : (t => Math.abs(t - model.mean) >= info.c - eps);
+    let s = svgOpen("bdTop", g, "Distribution with the event shaded");
+    s += yGrid(g, sy, ymax);
+    s += `<g clip-path="url(#clip-bdTop)">`;
+    if (model.disc) {
+      s += drawBars(g, sx, sy, model.f, j => "bar" + (ev(j) ? " ev" : " dim"));
+    } else {
+      const all = densityPaths(view.x0, view.x1, sx, sy);
+      s += `<path class="area" d="${all.area}"/>`;
+      if (mk) s += `<path class="evarea" d="${densityPaths(Math.max(view.x0, info.a), view.x1, sx, sy).area}"/>`;
+      else if (!info.degenerate) {
+        s += `<path class="evarea" d="${densityPaths(view.x0, Math.min(view.x1, model.mean - info.c), sx, sy).area}"/>`;
+        s += `<path class="evarea" d="${densityPaths(Math.max(view.x0, model.mean + info.c), view.x1, sx, sy).area}"/>`;
+      }
+      s += `<path class="curve" d="${all.line}"/>` + jumpsSvg(sx, sy);
+    }
+    s += `</g>`;
+    if (mk) s += vline(g, sx, info.a, sy0, "evline", "a", "evlab", 36);
+    else if (!info.degenerate) {
+      s += vline(g, sx, model.mean - info.c, sy0, "evline", "μ − kσ", "evlab", 36);
+      s += vline(g, sx, model.mean + info.c, sy0, "evline", "μ + kσ", "evlab", 36);
+    }
+    s += xAxisSvg(g, sx, sy0, view.x0, view.x1, model.disc, model.disc ? "k" : "x");
+    s += meanMark(g, sx, sy0, 20);
+    s += `</svg>`;
+    host.innerHTML = s;
+    charts.bdTop = { g, x0: view.x0, x1: view.x1, sx, sy };
+    $("bdTopLegend").innerHTML = `<span><i class="sw" style="background:var(--ev)"></i>The event ${mk ? `{${X} ≥ ${I("a")}}` : `{|${X} − ${mu}| ≥ ${k}${sg}}`}; its total ${model.disc ? "mass" : "area"} is the exact probability</span><span><i class="sw solid" style="border-color:var(--mean)"></i>${mu}</span>`;
+  }
+  function drawBdCurve(info) {
+    const host = $("bdCurve"), g = geomFor(host, 240, 280, { l: 52, r: 16, t: 16, b: 38 });
+    const mk = info.mk, logy = state.bounds.logy, YLO = 1e-4;
+    let xa, xb;
+    if (mk) { xa = Math.max(0, view.x0); xb = Math.max(xa + 0.5, view.x1); } else { xa = 0; xb = 6; }
+    const sx = t => g.m.l + (t - xa) / (xb - xa) * g.iw;
+    const sy = v => logy
+      ? g.m.t + g.ih - (Math.log10(Math.max(v, YLO)) - Math.log10(YLO)) / (-Math.log10(YLO)) * g.ih
+      : g.m.t + g.ih - clamp(v, 0, 1.02) * g.ih;
+    let s = svgOpen("bdCurve", g, "Exact probability and the bound as the threshold varies");
+    const yt = logy ? [1e-4, 1e-3, 0.01, 0.1, 1] : [0, 0.25, 0.5, 0.75, 1];
+    yt.forEach(y => {
+      s += `<line class="grid" x1="${g.m.l}" x2="${g.W - g.m.r}" y1="${sy(y)}" y2="${sy(y)}"/>`;
+      s += `<g class="tick"><text x="${g.m.l - 8}" y="${sy(y) + 4}" text-anchor="end">${logy ? (y >= 0.01 ? String(y) : y.toExponential(0).replace("e-", "e−")) : y.toFixed(2)}</text></g>`;
+    });
+    const sy0 = g.m.t + g.ih;
+    s += `<line class="axis" x1="${g.m.l}" x2="${g.W - g.m.r}" y1="${sy0}" y2="${sy0}"/>`;
+    const ticks = mk ? xTicks(xa, xb, g.iw, false) : [0, 1, 2, 3, 4, 5, 6];
+    ticks.forEach(t => { s += `<g class="tick"><line class="axis" x1="${sx(t)}" x2="${sx(t)}" y1="${sy0}" y2="${sy0 + 4}"/><text x="${sx(t)}" y="${sy0 + 18}" text-anchor="middle">${fmtP(t)}</text></g>`; });
+    s += `<text class="axlab" x="${g.W - g.m.r}" y="${g.H - 2}" text-anchor="end">${mk ? "a" : "k"}</text>`;
+    const showBound = mk ? info.valid : !info.degenerate;
+    const exactFn = mk ? (t => clamp(1 - model.Fminus(t), 0, 1)) : (t => info.degenerate ? 0 : chebExact(t));
+    const boundFn = mk ? (t => t > 0 ? Math.min(1, model.mean / t) : 1) : (t => t > 0 ? Math.min(1, 1 / (t * t)) : 1);
+    const N = Math.max(300, Math.round(g.iw * 1.5));
+    const ePts = [], bPts = [];
+    for (let i = 0; i <= N; i++) {
+      const t = xa + (xb - xa) * i / N;
+      ePts.push([sx(t), sy(exactFn(t))]);
+      bPts.push([sx(t), sy(Math.max(boundFn(t), 0))]);
+    }
+    const P = arr => arr.map(([a, b]) => `${a.toFixed(2)} ${b.toFixed(2)}`).join(" L");
+    s += `<g clip-path="url(#clip-bdCurve)">`;
+    if (showBound) {
+      s += `<path class="gap" d="M${P(bPts)} L${P(ePts.slice().reverse())} Z"/>`;
+      s += `<path class="bcurve" d="M${P(bPts)}"/>`;
+    }
+    s += `<path class="ecurve" d="M${P(ePts)}"/>`;
+    s += `</g>`;
+    const cur = mk ? info.a : state.bounds.k;
+    if (cur >= xa && cur <= xb && !(info.degenerate)) {
+      const cx = sx(cur);
+      s += `<line class="marker" x1="${cx}" x2="${cx}" y1="${g.m.t}" y2="${sy0}"/>`;
+      if (showBound) s += `<circle class="mdot-b" cx="${cx}" cy="${sy(Math.max(boundFn(cur), 0))}" r="5"/>`;
+      s += `<circle class="mdot-e" cx="${cx}" cy="${sy(exactFn(cur))}" r="5"/>`;
+    }
+    s += `</svg>`;
+    host.innerHTML = s;
+    charts.bdCurve = { g, x0: xa, x1: xb, sx, sy };
+  }
+  $("bdKind").addEventListener("click", e => {
+    const b = e.target.closest("button[data-k]"); if (!b) return;
+    state.bounds.kind = b.dataset.k; save(); redrawCharts();
+  });
+  $("bdLog").addEventListener("change", e => { state.bounds.logy = e.target.checked; save(); redrawCharts(); });
+  function setBoundValue(v) {
+    if (v === null || !isFinite(v)) return;
+    const bd = state.bounds;
+    if (bd.kind === "markov") {
+      const mst = niceStep(Math.max(view.x1, 0.5) / 300);
+      bd.a = Math.max(mst, roundTo(v, mst));
+    } else bd.k = clamp(roundTo(v, 0.05), 0.1, 6);
+    save(); redrawCharts();
+  }
+  bindPair("bdV", setBoundValue);
+
+  // =================== SIMULATION ===================
+  const SIM_CAP = 100000;
+  const sim = { n: 0, sum: 0, sumsq: 0, xs: new Float64Array(SIM_CAP), means: new Float64Array(SIM_CAP), counts: new Map(), ghosts: [], running: false, raf: 0, frame: 0, last: null };
+  function ghostPath() {
+    const pts = [], seen = new Set();
+    for (let i = 0; i <= 400; i++) {
+      const idx = Math.min(sim.n, Math.round(Math.pow(sim.n, i / 400))) - 1;
+      if (idx < 0 || seen.has(idx)) continue;
+      seen.add(idx); pts.push([idx + 1, sim.means[idx]]);
+    }
+    return pts;
+  }
+  function simReset(keepGhost) {
+    simStop();
+    if (keepGhost && sim.n > 1) { sim.ghosts.push(ghostPath()); if (sim.ghosts.length > 6) sim.ghosts.shift(); }
+    else if (!keepGhost) sim.ghosts = [];
+    sim.n = 0; sim.sum = 0; sim.sumsq = 0; sim.counts = new Map(); sim.last = null;
+    spareNormal = null;
+  }
+  function simDraw(m) {
+    for (let i = 0; i < m && sim.n < SIM_CAP; i++) {
+      const v = model.sample();
+      sim.xs[sim.n] = v; sim.sum += v; sim.sumsq += v * v; sim.n++;
+      sim.means[sim.n - 1] = sim.sum / sim.n;
+      if (model.disc) sim.counts.set(v, (sim.counts.get(v) || 0) + 1);
+      sim.last = v;
+    }
+    if (sim.n >= SIM_CAP) simStop();
+  }
+  function simStop() {
+    sim.running = false; cancelAnimationFrame(sim.raf);
+    const b = $("simRun"); if (b) b.textContent = "Run";
+  }
+  function simLoop() {
+    if (!sim.running) return;
+    sim.frame++;
+    const m = sim.n < 40 ? (sim.frame % 3 === 0 ? 1 : 0) : sim.n < 300 ? 2 : Math.floor(sim.n / 60);
+    if (m) { simDraw(m); drawSim(); }
+    if (sim.running) sim.raf = requestAnimationFrame(simLoop);
+  }
+  document.querySelectorAll("[data-draw]").forEach(b => b.addEventListener("click", () => { simDraw(Number(b.dataset.draw)); drawSim(); }));
+  $("simRun").addEventListener("click", () => {
+    if (sim.running) { simStop(); return; }
+    if (sim.n >= SIM_CAP) return;
+    sim.running = true; sim.frame = 0; $("simRun").textContent = "Pause";
+    sim.raf = requestAnimationFrame(simLoop);
+  });
+  $("simNew").addEventListener("click", () => { simReset(true); drawSim(); });
+  $("simReset").addEventListener("click", () => { simReset(false); drawSim(); });
+
+  function drawSim() {
+    if (state.tab !== "sim") return;
+    const nn = sim.n, mean = nn ? sim.sum / nn : NaN;
+    const sdev = nn > 1 ? Math.sqrt(Math.max(0, (sim.sumsq - nn * mean * mean) / (nn - 1))) : NaN;
+    const lastTxt = sim.last === null ? "—" : model.disc ? String(sim.last) : fmt(sim.last, 3);
+    $("simStats").innerHTML = `
+      <div><dt>${n}</dt><dd>${nn.toLocaleString("en-US")}</dd></div>
+      <div><dt>${Xbar}</dt><dd>${nn ? fmt(mean) : "—"}</dd></div>
+      <div><dt>${mu}</dt><dd>${fmt(model.mean)}</dd></div>
+      <div><dt>|${Xbar} − ${mu}|</dt><dd>${nn ? fmt(Math.abs(mean - model.mean)) : "—"}</dd></div>
+      <div><dt>${I("s")}<sub>${n}</sub></dt><dd>${nn > 1 ? fmt(sdev) : "—"}</dd></div>
+      <div><dt>${sg}</dt><dd>${fmt(model.sd)}</dd></div>
+      <div><dt>Last draw</dt><dd>${lastTxt}</dd></div>`;
+    $("simNote").innerHTML = nn >= SIM_CAP
+      ? `Reached ${SIM_CAP.toLocaleString("en-US")} draws. Press New run or Reset to start again.`
+      : `New run keeps the previous running-mean path in grey for comparison. Changing the distribution or its parameters starts over.`;
+    drawSimHist(mean); drawSimMean(mean);
+  }
+  function drawSimHist(mean) {
+    const host = $("simHist"), g = geomFor(host, 260, 300, { l: 52, r: 14, t: 30, b: 34 });
+    const { x0, x1 } = view, nn = sim.n;
+    let emp = null, empMax = 0, binW = 0, bin0 = 0;
+    if (nn && model.disc) {
+      emp = j => (sim.counts.get(j) || 0) / nn;
+      sim.counts.forEach((c, j) => { if (j >= x0 - 0.5 && j <= x1 + 0.5) empMax = Math.max(empMax, c / nn); });
+    } else if (nn) {
+      binW = niceStep((x1 - x0) / 36); bin0 = Math.floor(x0 / binW);
+      const nb = Math.ceil(x1 / binW) - bin0 + 1, cnt = new Float64Array(Math.max(1, nb));
+      for (let i = 0; i < nn; i++) { const b = Math.floor(sim.xs[i] / binW) - bin0; if (b >= 0 && b < nb) cnt[b]++; }
+      emp = cnt;
+      for (let b = 0; b < nb; b++) empMax = Math.max(empMax, cnt[b] / (nn * binW));
+    }
+    const ymax = empMax > view.ymax ? empMax * 1.08 : view.ymax;
+    const { sx, sy } = viewScales(g, ymax), sy0 = sy(0);
+    let s = svgOpen("simHist", g, "Histogram of simulated draws with the true distribution overlaid");
+    s += yGrid(g, sy, ymax);
+    s += `<g clip-path="url(#clip-simHist)">`;
+    if (model.disc) {
+      if (emp) s += drawBars(g, sx, sy, emp, () => "sbar");
+      const unit = g.iw / (x1 - x0), bw = Math.max(4, Math.min(unit * 0.72, 46));
+      const k0 = Math.max(model.T.lo, Math.ceil(x0 - 0.5)), k1 = Math.min(model.T.hi, Math.floor(x1 + 0.5));
+      let d = "";
+      for (let j = k0; j <= k1; j++) { const pv = model.f(j); if (pv > 1e-6) d += `M${(sx(j) - bw / 2).toFixed(2)} ${sy(pv).toFixed(2)} H${(sx(j) + bw / 2).toFixed(2)} `; }
+      s += `<path class="truth" d="${d}"/>`;
+    } else {
+      if (emp) {
+        for (let b = 0; b < emp.length; b++) {
+          if (!emp[b]) continue;
+          const l = (bin0 + b) * binW, h = emp[b] / (nn * binW);
+          s += `<rect class="sbar" x="${sx(l).toFixed(2)}" y="${sy(h).toFixed(2)}" width="${Math.max(0.5, sx(l + binW) - sx(l) - 1).toFixed(2)}" height="${(sy0 - sy(h)).toFixed(2)}"/>`;
+        }
+      }
+      s += `<path class="truth" d="${densityPaths(x0, x1, sx, sy).line}"/>`;
+    }
+    s += `</g>`;
+    s += xAxisSvg(g, sx, sy0, x0, x1, model.disc, model.disc ? "k" : "x");
+    if (model.mean >= x0 && model.mean <= x1) {
+      const xm = sx(model.mean), [lx, an] = labelX(g, xm, 40);
+      s += `<line class="meanline" x1="${xm}" x2="${xm}" y1="${g.m.t}" y2="${sy0}"/><text class="meanlab" x="${lx}" y="12" text-anchor="${an}">μ = ${fmt(model.mean, 3)}</text>`;
+    }
+    if (nn && mean >= x0 && mean <= x1) {
+      const xm = sx(mean), [lx, an] = labelX(g, xm, 40);
+      s += `<line class="xbar" x1="${xm}" x2="${xm}" y1="${g.m.t}" y2="${sy0}"/><text class="xbarlab" x="${lx}" y="26" text-anchor="${an}">X̄ = ${fmt(mean, 3)}</text>`;
+    }
+    if (!nn) s += `<text class="empty" x="${g.m.l + g.iw / 2}" y="${g.m.t + g.ih / 2}" text-anchor="middle">Press Draw or Run to start sampling</text>`;
+    s += `</svg>`;
+    host.innerHTML = s;
+    charts.simHist = { g, x0, x1, sx, sy };
+    $("simHistLegend").innerHTML = `<span><i class="sw" style="background:var(--bar);opacity:.55"></i>${model.disc ? "Relative frequency of each value" : `Histogram (bin width ${fmtP(binW || niceStep((x1 - x0) / 36))}), scaled to area 1`}</span>
+      <span><i class="sw solid" style="border-color:var(--ink)"></i>True ${model.disc ? "PMF" : "density"}</span>
+      <span><i class="sw solid" style="border-color:var(--mean)"></i>${mu}</span><span><i class="sw solid" style="border-color:var(--bar-hi)"></i>${Xbar}</span>`;
+  }
+  function drawSimMean(mean) {
+    const host = $("simMean"), g = geomFor(host, 240, 280, { l: 60, r: 18, t: 16, b: 38 });
+    const nn = sim.n;
+    const nmax = Math.max(100, Math.pow(10, Math.ceil(Math.log10(Math.max(1, nn)))));
+    const L = Math.log10(nmax);
+    const sx = v => g.m.l + Math.log10(Math.max(1, v)) / L * g.iw;
+    const sd = model.sd > 0 ? model.sd : 1, mu0 = model.mean;
+    const ylo = mu0 - 2.5 * sd, yhi = mu0 + 2.5 * sd;
+    const sy = v => g.m.t + g.ih - (clamp(v, ylo - 0.2 * (yhi - ylo), yhi + 0.2 * (yhi - ylo)) - ylo) / (yhi - ylo) * g.ih;
+    let s = svgOpen("simMean", g, "Running sample mean against the number of draws");
+    const st = niceStep((yhi - ylo) / 5), dec = decFor(st);
+    for (let i = Math.ceil(ylo / st - 1e-9); i * st <= yhi + 1e-9; i++) {
+      const y = i * st;
+      s += `<line class="grid" x1="${g.m.l}" x2="${g.W - g.m.r}" y1="${sy(y)}" y2="${sy(y)}"/><g class="tick"><text x="${g.m.l - 8}" y="${sy(y) + 4}" text-anchor="end">${minus(y.toFixed(dec))}</text></g>`;
+    }
+    const sy0 = g.m.t + g.ih;
+    s += `<line class="axis" x1="${g.m.l}" x2="${g.W - g.m.r}" y1="${sy0}" y2="${sy0}"/>`;
+    for (let e = 0; e <= L; e++) {
+      const v = Math.pow(10, e), lab = v >= 1000 ? `${v / 1000}k` : String(v);
+      s += `<g class="tick"><line class="axis" x1="${sx(v)}" x2="${sx(v)}" y1="${sy0}" y2="${sy0 + 4}"/><text x="${sx(v)}" y="${sy0 + 18}" text-anchor="middle">${lab}</text></g>`;
+    }
+    s += `<text class="axlab" x="${g.W - g.m.r}" y="${g.H - 2}" text-anchor="end">n (log scale)</text>`;
+    s += `<g clip-path="url(#clip-simMean)">`;
+    if (model.sd > 0) {
+      const up = [], dn = [];
+      for (let i = 0; i <= 200; i++) {
+        const v = Math.pow(10, L * i / 200), w = 2 * model.sd / Math.sqrt(v);
+        up.push(`${sx(v).toFixed(2)} ${sy(mu0 + w).toFixed(2)}`); dn.push(`${sx(v).toFixed(2)} ${sy(mu0 - w).toFixed(2)}`);
+      }
+      s += `<path class="funnel" d="M${up.join(" L")} L${dn.slice().reverse().join(" L")} Z"/>`;
+      s += `<path class="funneledge" d="M${up.join(" L")}"/><path class="funneledge" d="M${dn.join(" L")}"/>`;
+    }
+    s += `<line class="meanline" x1="${g.m.l}" x2="${g.W - g.m.r}" y1="${sy(mu0)}" y2="${sy(mu0)}"/>`;
+    sim.ghosts.forEach(gp => {
+      s += `<path class="ghost" d="M${gp.filter(([i]) => i <= nmax).map(([i, v]) => `${sx(i).toFixed(2)} ${sy(v).toFixed(2)}`).join(" L")}"/>`;
+    });
+    if (nn) {
+      const pts = [];
+      if (nn <= 800) for (let i = 0; i < nn; i++) pts.push([i + 1, sim.means[i]]);
+      else {
+        let prev = -1;
+        for (let i = 0; i <= 800; i++) {
+          const idx = Math.min(nn, Math.round(Math.pow(nn, i / 800))) - 1;
+          if (idx <= prev) continue;
+          prev = idx; pts.push([idx + 1, sim.means[idx]]);
+        }
+      }
+      s += `<path class="run" d="M${pts.map(([i, v]) => `${sx(i).toFixed(2)} ${sy(v).toFixed(2)}`).join(" L")}"/>`;
+    }
+    s += `</g>`;
+    s += `<text class="meanlab" x="${g.m.l + 6}" y="${sy(mu0) - 6}">μ</text>`;
+    if (nn) {
+      const ex = sx(nn), ey = sy(mean);
+      s += `<circle class="hdot" cx="${ex}" cy="${ey}" r="4.5"/>`;
+      const right = ex > g.W - g.m.r - 120;
+      s += `<text class="xbarlab" x="${right ? ex - 8 : ex + 8}" y="${ey - 8}" text-anchor="${right ? "end" : "start"}">X̄ = ${fmt(mean, 3)}</text>`;
+    } else {
+      s += `<text class="empty" x="${g.m.l + g.iw / 2}" y="${g.m.t + 20}" text-anchor="middle">The running mean appears here as you draw</text>`;
+    }
+    s += `</svg>`;
+    host.innerHTML = s;
+  }
+
+  // =================== CENTRAL LIMIT THEOREM ===================
+  const CLT_NMAX = 200, BE_C = 0.4748;
+  const CLT_NS = (() => { const a = []; for (let i = 1; i <= 20; i++) a.push(i); let v = 20; while (v < CLT_NMAX) { v = Math.min(CLT_NMAX, Math.max(v + 1, Math.round(v * 1.09))); a.push(v); } return a; })();
+  const phi = z => Math.exp(-0.5 * z * z) / Math.sqrt(2 * Math.PI);
+  let cltCache = null;
+  const cltSim = { z: [], sig: "" };
+  const cltSig = () => JSON.stringify([state.dist, state.params[state.dist], state.geoMode]);
+
+  // Standardized skewness E(X−μ)³/σ³ and E|X−μ|³/σ³ of one draw.
+  function parentMoments() {
+    if (!model.disc) return ({ cuniform: [0, 1.2990381], exponential: [2, 12 / Math.E - 2], normal: [0, 1.5957691] })[model.key];
+    const T = model.T, hi = Math.min(T.hi, T.Q(1 - 1e-13));
+    let m3 = 0, a3 = 0;
+    for (let j = T.lo; j <= hi; j++) { const pr = T.P(j), d = j - model.mean; m3 += pr * d * d * d; a3 += pr * Math.abs(d) ** 3; }
+    const s3 = model.sd ** 3;
+    return [m3 / s3, a3 / s3];
+  }
+  function latticeFrom(lo, hi, fn) {
+    const a = new Float64Array(Math.max(1, hi - lo + 1));
+    for (let i = 0; i < a.length; i++) a[i] = fn(lo + i);
+    return { kind: "lattice", lo, p: a };
+  }
+  function trimLattice(o) {
+    let a = 0, b = o.p.length - 1;
+    while (a < b && o.p[a] < 1e-16) a++;
+    while (b > a && o.p[b] < 1e-16) b--;
+    return { kind: "lattice", lo: o.lo + a, p: o.p.slice(a, b + 1) };
+  }
+  function convolve(A, B) {
+    const out = new Float64Array(A.p.length + B.p.length - 1);
+    for (let i = 0; i < A.p.length; i++) {
+      const ai = A.p[i]; if (ai === 0) continue;
+      for (let j = 0; j < B.p.length; j++) out[i + j] += ai * B.p[j];
+    }
+    return trimLattice({ lo: A.lo + B.lo, p: out });
+  }
+  const binomPmf = (N, pp, j) => pp === 0 ? (j === 0 ? 1 : 0) : pp === 1 ? (j === N ? 1 : 0) : Math.exp(logC(N, j) + j * Math.log(pp) + (N - j) * Math.log(1 - pp));
+  const interpDens = (arr, t) => { if (t < 0 || t > arr.length - 1) return 0; const i = Math.min(arr.length - 2, Math.floor(t)), fr = t - i; return arr[i] * (1 - fr) + arr[i + 1] * fr; };
+  const interpCum = (arr, t) => { if (t <= 0) return 0; if (t >= arr.length - 1) return arr[arr.length - 1]; const i = Math.floor(t), fr = t - i; return arr[i] * (1 - fr) + arr[i + 1] * fr; };
+
+  // Exact distribution of S_n = X_1 + … + X_n (closed form where one exists, convolution otherwise).
+  function cltDist(nn) {
+    const c = cltCache, key = model.key, q = model.q;
+    if (c.byN.has(nn)) return c.byN.get(nn);
+    const mS = nn * model.mean, sS = Math.sqrt(nn) * model.sd;
+    const lo0 = Math.floor(mS - 13 * sS - 3), hi0 = Math.ceil(mS + 15 * sS + 6);
+    let out;
+    if (key === "bernoulli" || key === "binomial") {
+      const N = key === "bernoulli" ? nn : nn * q.n;
+      out = latticeFrom(Math.max(0, lo0), Math.min(N, hi0), j => binomPmf(N, q.p, j));
+    } else if (key === "poisson") {
+      const L = nn * q.lam;
+      out = latticeFrom(Math.max(0, lo0), hi0, j => Math.exp(-L + j * Math.log(L) - lf(j)));
+    } else if (key === "geometric") {
+      const pp = q.p, trials = state.geoMode === "trials", lo = Math.max(trials ? nn : 0, lo0);
+      out = latticeFrom(lo, Math.max(lo, hi0), j => trials
+        ? Math.exp(logC(j - 1, nn - 1) + nn * Math.log(pp) + (j - nn) * Math.log(1 - pp))
+        : Math.exp(logC(j + nn - 1, nn - 1) + nn * Math.log(pp) + j * Math.log(1 - pp)));
+    } else if (model.disc) {
+      if (!c.pow) { const T = model.T; c.pow = [null, trimLattice(latticeFrom(T.lo, T.hi, j => T.P(j)))]; }
+      while (c.pow.length <= nn) c.pow.push(convolve(c.pow[c.pow.length - 1], c.pow[1]));
+      out = c.pow[nn];
+    } else if (key === "normal") {
+      out = { kind: "cont", dens: phi, cdf: Phi, exact: true };
+    } else if (key === "exponential") {
+      const rn = Math.sqrt(nn), lg = lf(nn - 1);
+      out = {
+        kind: "cont",
+        dens: z => { const u = nn + z * rn; return u <= 0 ? 0 : rn * Math.exp((nn - 1) * Math.log(u) - u - lg); },
+        cdf: z => { const u = nn + z * rn; if (u <= 0) return 0; const lu = Math.log(u); let s = 0; for (let j = 0; j < nn; j++) s += Math.exp(j * lu - u - lf(j)); return clamp(1 - s, 0, 1); }
+      };
+    } else {
+      // Continuous uniform: Irwin–Hall density by the recurrence f_m(x) = [x f_{m−1}(x) + (m − x) f_{m−1}(x − 1)] / (m − 1).
+      const sc = Math.sqrt(nn / 12);
+      if (nn === 1) out = { kind: "cont", dens: z => { const xv = 0.5 + z * sc; return xv >= 0 && xv <= 1 ? sc : 0; }, cdf: z => clamp(0.5 + z * sc, 0, 1) };
+      else {
+        const H = 40;
+        if (!c.ih) { const f1 = new Float64Array(H + 1).fill(1); f1[0] = 0.5; f1[H] = 0.5; c.ih = [null, f1]; }
+        while (c.ih.length <= nn) {
+          const m = c.ih.length, prev = c.ih[m - 1], cur = new Float64Array(m * H + 1);
+          for (let i = 0; i <= m * H; i++) {
+            const xv = i / H, a = i < prev.length ? prev[i] : 0, b = i - H >= 0 && i - H < prev.length ? prev[i - H] : 0;
+            cur[i] = (xv * a + (m - xv) * b) / (m - 1);
+          }
+          c.ih.push(cur);
+        }
+        const f = c.ih[nn], cum = new Float64Array(f.length);
+        for (let i = 1; i < f.length; i++) cum[i] = cum[i - 1] + (f[i - 1] + f[i]) / (2 * H);
+        out = { kind: "cont", dens: z => sc * interpDens(f, (nn / 2 + z * sc) * H), cdf: z => clamp(interpCum(cum, (nn / 2 + z * sc) * H), 0, 1) };
+      }
+    }
+    c.byN.set(nn, out);
+    return out;
+  }
+  function cltKS(dd, nn) {
+    let best = { d: 0, z: 0, F: 0.5, G: 0.5 };
+    if (dd.exact) return best;
+    if (dd.kind === "lattice") {
+      const mS = nn * model.mean, sS = Math.sqrt(nn) * model.sd;
+      let cum = 0;
+      for (let i = 0; i < dd.p.length; i++) {
+        const z = (dd.lo + i - mS) / sS, G = Phi(z);
+        let e = Math.abs(cum - G); if (e > best.d) best = { d: e, z, F: cum, G };
+        cum += dd.p[i];
+        e = Math.abs(cum - G); if (e > best.d) best = { d: e, z, F: cum, G };
+      }
+      return best;
+    }
+    for (let i = 0; i <= 1600; i++) {
+      const z = -8 + i * 0.01, F = dd.cdf(z), G = Phi(z), e = Math.abs(F - G);
+      if (e > best.d) best = { d: e, z, F, G };
+    }
+    return best;
+  }
+  function cltDescText(nn) {
+    const q = model.q, key = model.key, S = `${I("S")}<sub>${n}</sub>`;
+    const tail = ` The charts show the exact distribution of ${I("Z")}<sub>${n}</sub>, not a simulation.`;
+    const head = `${S} = ${I("X")}<sub>1</sub> + … + ${I("X")}<sub>${n}</sub> is a sum of ${n} = ${nn} independent draws from ${model.d.name}(${model.d.sig(q)}). `;
+    const body = {
+      bernoulli: `Here ${S} ~ Binomial(${nn}, ${fmtP(q.p)}), so this is the normal approximation to the binomial.`,
+      binomial: `Here ${S} ~ Binomial(${nn * q.n}, ${fmtP(q.p)}).`,
+      poisson: `Here ${S} ~ Poisson(${fmtP(nn * q.lam)}).`,
+      geometric: state.geoMode === "trials" ? `Here ${S} is negative binomial: the number of trials needed to reach ${nn} successes.` : `Here ${S} is negative binomial: the number of failures before the ${nn}th success.`,
+      uniform: `${S} has no simple closed form, so its PMF is computed by convolving the PMF with itself ${nn} times.`,
+      hypergeometric: `${S} has no simple closed form, so its PMF is computed by convolving the PMF with itself ${nn} times.`,
+      exponential: `Here ${S} ~ Gamma(${nn}, ${fmtP(q.lam)}), the waiting time until the ${nn}th event.`,
+      cuniform: `${S} is a rescaled Irwin–Hall sum; its density is computed exactly by a recurrence.`,
+      normal: `Here ${S} ~ N(${n}${mu}, ${n}${sg}${sup(2)}) exactly, so ${I("Z")}<sub>${n}</sub> is standard normal for every ${n}. The CLT has nothing left to do; try a skewed distribution.`
+    }[key];
+    return head + body + (key === "normal" ? "" : tail);
+  }
+
+  function drawClt() {
+    const nn = state.clt.n, sig = cltSig();
+    if (!cltCache || cltCache.sig !== sig) cltCache = { sig, byN: new Map(), ks: null, mom: null, ymax: null };
+    const Zn = `${I("Z")}<sub>${n}</sub>`, Sn = `${I("S")}<sub>${n}</sub>`;
+    $("cltStatement").innerHTML = `${Zn} = ${frac(`${Sn} − ${n}${mu}`, `${sg}√${n}`)} = ${frac(`${Xbar} − ${mu}`, `${sg} / √${n}`)} → N(0, 1) as ${n} → ∞`;
+    $("cltDesc").innerHTML = cltDescText(nn);
+    const degenerate = !(model.sd > 0);
+    $("cltMsg").hidden = !degenerate;
+    if (degenerate) {
+      $("cltMsg").innerHTML = `Here ${sg} = 0, so ${X} is constant and there is nothing to standardize. Pick parameters with some randomness.`;
+      ["cltDist", "cltCdf", "cltKs", "cltStats", "cltDistLegend"].forEach(id => { $(id).innerHTML = ""; });
+      return;
+    }
+    if (!cltCache.mom) cltCache.mom = parentMoments();
+    const [gam, rho] = cltCache.mom;
+    if (cltCache.ymax === null) {
+      const d1 = cltDist(1);
+      let pk = 0;
+      if (d1.kind === "lattice") { for (let i = 0; i < d1.p.length; i++) pk = Math.max(pk, d1.p[i]); pk *= model.sd; }
+      else for (let z = -4; z <= 4; z += 0.01) pk = Math.max(pk, d1.dens(z));
+      cltCache.ymax = niceTop(Math.min(1.6, Math.max(0.42, pk)));
+    }
+    if (!cltCache.ks) cltCache.ks = model.key === "normal" ? [] : CLT_NS.map(m => [m, cltKS(cltDist(m), m).d]);
+    const dd = cltDist(nn), best = cltKS(dd, nn);
+    if (cltSim.sig !== `${sig}|${nn}`) { cltSim.z = []; cltSim.sig = `${sig}|${nn}`; }
+    const be = BE_C * rho / Math.sqrt(nn);
+    $("cltStats").innerHTML = `
+      <div><dt>${n}</dt><dd>${nn}</dd></div>
+      <div><dt>Skewness of ${X}</dt><dd>${fmt(gam, 3)}</dd></div>
+      <div><dt>Skewness of ${Zn}</dt><dd>${fmt(gam / Math.sqrt(nn), 3)}</dd></div>
+      <div><dt>sup |${I("F")}<sub>${n}</sub> − Φ|</dt><dd>${fmt(best.d)}</dd></div>
+      <div><dt>Berry–Esseen bound</dt><dd>${fmt(be)}</dd></div>
+      <div><dt>Simulated values</dt><dd>${cltSim.z.length.toLocaleString("en-US")}</dd></div>`;
+    drawCltDist(dd, nn); drawCltCdf(dd, nn, best); drawCltKs(nn, rho, best);
+  }
+  function drawCltDist(dd, nn) {
+    const host = $("cltDist"), g = geomFor(host, 250, 300, { l: 52, r: 14, t: 16, b: 34 });
+    const z0 = -4, z1 = 4, ymax = cltCache.ymax;
+    const sx = z => g.m.l + (z - z0) / (z1 - z0) * g.iw;
+    const sy = y => g.m.t + g.ih - clamp(y, 0, ymax * 1.2) / ymax * g.ih, sy0 = sy(0);
+    const mS = nn * model.mean, sS = Math.sqrt(nn) * model.sd;
+    let s = svgOpen("cltDist", g, "Exact distribution of the standardized sum with the standard normal density");
+    s += yGrid(g, sy, ymax);
+    s += `<g clip-path="url(#clip-cltDist)">`;
+    if (dd.kind === "lattice") {
+      const d = 1 / sS, dpx = d / (z1 - z0) * g.iw, last = dd.lo + dd.p.length - 1;
+      const kA = Math.max(dd.lo, Math.floor(mS + z0 * sS) - 1), kB = Math.min(last, Math.ceil(mS + z1 * sS) + 1);
+      if (dpx >= 3) {
+        for (let kk = kA; kk <= kB; kk++) {
+          const z = (kk - mS) / sS, h = dd.p[kk - dd.lo] * sS;
+          if (h <= 0) continue;
+          s += `<rect class="latt" x="${(sx(z - d / 2) + 0.5).toFixed(2)}" y="${sy(h).toFixed(2)}" width="${Math.max(1, dpx - 1).toFixed(2)}" height="${(sy0 - sy(h)).toFixed(2)}"/>`;
+        }
+      } else {
+        let path = "";
+        for (let kk = kA; kk <= kB; kk++) {
+          const z = (kk - mS) / sS, yv = sy(dd.p[kk - dd.lo] * sS).toFixed(2);
+          path += `${path ? " L" : "M"}${sx(z - d / 2).toFixed(2)} ${yv} L${sx(z + d / 2).toFixed(2)} ${yv}`;
+        }
+        if (path) s += `<path class="latt" d="M${sx(z0)} ${sy0} ${path.replace(/^M/, "L")} L${sx(z1)} ${sy0} Z"/><path class="lattline" d="${path}"/>`;
+      }
+    } else {
+      const pts = [];
+      for (let i = 0; i <= 800; i++) { const z = z0 + (z1 - z0) * i / 800; pts.push(`${sx(z).toFixed(2)} ${sy(dd.dens(z)).toFixed(2)}`); }
+      s += `<path class="latt" d="M${sx(z0)} ${sy0} L${pts.join(" L")} L${sx(z1)} ${sy0} Z"/><path class="lattline" d="M${pts.join(" L")}"/>`;
+    }
+    if (cltSim.z.length) {
+      const M = cltSim.z.length;
+      let binW, org;
+      if (dd.kind === "lattice") { const d = 1 / sS; binW = d * Math.max(1, Math.round(0.2 / d)); org = (Math.round(mS) - mS) / sS; }
+      else { binW = 0.2; org = 0; }
+      const counts = new Map();
+      cltSim.z.forEach(z => { const b = Math.floor((z - org) / binW + 0.5); counts.set(b, (counts.get(b) || 0) + 1); });
+      let path = "";
+      [...counts.keys()].sort((a, b) => a - b).forEach(b => {
+        const c0 = org + b * binW, h = counts.get(b) / (M * binW);
+        path += `M${sx(c0 - binW / 2).toFixed(2)} ${sy0} V${sy(h).toFixed(2)} H${sx(c0 + binW / 2).toFixed(2)} V${sy0} Z `;
+      });
+      s += `<path class="simstep" d="${path}"/>`;
+    }
+    const ph = [];
+    for (let i = 0; i <= 300; i++) { const z = z0 + (z1 - z0) * i / 300; ph.push(`${sx(z).toFixed(2)} ${sy(phi(z)).toFixed(2)}`); }
+    s += `<path class="phi" d="M${ph.join(" L")}"/>`;
+    s += `</g>`;
+    s += xAxisSvg(g, sx, sy0, z0, z1, true, "z");
+    s += `</svg>`;
+    host.innerHTML = s;
+    $("cltDistLegend").innerHTML = `<span><i class="sw" style="background:var(--bar);opacity:.5"></i>Exact distribution of ${I("Z")}<sub>${n}</sub>${dd.kind === "lattice" ? " (bar area = probability)" : ""}</span>
+      <span><i class="sw solid" style="border-color:var(--ink)"></i>Standard normal density φ</span>
+      ${cltSim.z.length ? `<span><i class="sw" style="background:var(--ev);opacity:.45"></i>Histogram of ${cltSim.z.length.toLocaleString("en-US")} simulated values</span>` : ""}`;
+  }
+  function drawCltCdf(dd, nn, best) {
+    const host = $("cltCdf"), g = geomFor(host, 210, 240, { l: 52, r: 14, t: 14, b: 34 });
+    const z0 = -4, z1 = 4;
+    const sx = z => g.m.l + (z - z0) / (z1 - z0) * g.iw, sy = y => g.m.t + g.ih - y * g.ih, sy0 = sy(0);
+    const mS = nn * model.mean, sS = Math.sqrt(nn) * model.sd;
+    let s = svgOpen("cltCdf", g, "CDF of the standardized sum against the standard normal CDF");
+    [0, 0.25, 0.5, 0.75, 1].forEach(y => {
+      s += `<line class="grid" x1="${g.m.l}" x2="${g.W - g.m.r}" y1="${sy(y)}" y2="${sy(y)}"/><g class="tick"><text x="${g.m.l - 8}" y="${sy(y) + 4}" text-anchor="end">${y.toFixed(2)}</text></g>`;
+    });
+    s += `<g clip-path="url(#clip-cltCdf)">`;
+    let path;
+    if (dd.kind === "lattice") {
+      const last = dd.lo + dd.p.length - 1;
+      const kA = Math.max(dd.lo, Math.floor(mS + z0 * sS) - 1), kB = Math.min(last, Math.ceil(mS + z1 * sS) + 1);
+      let cum = 0;
+      for (let kk = dd.lo; kk < kA; kk++) cum += dd.p[kk - dd.lo];
+      path = `M${sx(z0)} ${sy(cum).toFixed(2)}`;
+      for (let kk = kA; kk <= kB; kk++) {
+        const z = (kk - mS) / sS;
+        cum += dd.p[kk - dd.lo];
+        path += ` H${sx(z).toFixed(2)} V${sy(Math.min(1, cum)).toFixed(2)}`;
+      }
+      path += ` H${sx(z1)}`;
+    } else {
+      const pts = [];
+      for (let i = 0; i <= 400; i++) { const z = z0 + (z1 - z0) * i / 400; pts.push(`${sx(z).toFixed(2)} ${sy(dd.cdf(z)).toFixed(2)}`); }
+      path = `M${pts.join(" L")}`;
+    }
+    s += `<path class="step" d="${path}"/>`;
+    const ph = [];
+    for (let i = 0; i <= 300; i++) { const z = z0 + (z1 - z0) * i / 300; ph.push(`${sx(z).toFixed(2)} ${sy(Phi(z)).toFixed(2)}`); }
+    s += `<path class="phidash" d="M${ph.join(" L")}"/>`;
+    s += `</g>`;
+    if (best.d > 0 && best.z >= z0 && best.z <= z1) {
+      const xg = sx(best.z);
+      s += `<line class="gapline" x1="${xg}" x2="${xg}" y1="${sy(best.F)}" y2="${sy(best.G)}"/>`;
+      const [lx, an] = labelX(g, xg + 10, 70);
+      s += `<text class="evnum" x="${best.z < 0 ? xg + 10 : xg - 10}" y="${(sy(best.F) + sy(best.G)) / 2 + 4}" text-anchor="${best.z < 0 ? "start" : "end"}">gap ${fmt(best.d)}</text>`;
+    }
+    s += xAxisSvg(g, sx, sy0, z0, z1, true, "z");
+    s += `</svg>`;
+    host.innerHTML = s;
+  }
+  function drawCltKs(nn, rho, best) {
+    const host = $("cltKs"), g = geomFor(host, 230, 270, { l: 58, r: 16, t: 14, b: 38 });
+    const L = Math.log10(CLT_NMAX), YD = 4;
+    const sx = m => g.m.l + Math.log10(m) / L * g.iw;
+    const sy = v => g.m.t + (-Math.log10(clamp(v, 1e-4, 1))) / YD * g.ih, sy0 = g.m.t + g.ih;
+    let s = svgOpen("cltKs", g, "Largest CDF gap and Berry–Esseen bound against n on log–log axes");
+    [1, 0.1, 0.01, 0.001, 0.0001].forEach(y => {
+      s += `<line class="grid" x1="${g.m.l}" x2="${g.W - g.m.r}" y1="${sy(y)}" y2="${sy(y)}"/><g class="tick"><text x="${g.m.l - 8}" y="${sy(y) + 4}" text-anchor="end">${y >= 0.01 ? y : y.toExponential(0).replace("e-", "e−")}</text></g>`;
+    });
+    s += `<line class="axis" x1="${g.m.l}" x2="${g.W - g.m.r}" y1="${sy0}" y2="${sy0}"/>`;
+    [1, 2, 5, 10, 20, 50, 100, 200].forEach(m => {
+      s += `<g class="tick"><line class="axis" x1="${sx(m)}" x2="${sx(m)}" y1="${sy0}" y2="${sy0 + 4}"/><text x="${sx(m)}" y="${sy0 + 18}" text-anchor="middle">${m}</text></g>`;
+    });
+    s += `<text class="axlab" x="${g.W - g.m.r}" y="${g.H - 2}" text-anchor="end">n (log scale)</text>`;
+    s += `<g clip-path="url(#clip-cltKs)">`;
+    const bp = [];
+    for (let i = 0; i <= 120; i++) { const m = Math.pow(10, L * i / 120); bp.push(`${sx(m).toFixed(2)} ${sy(BE_C * rho / Math.sqrt(m)).toFixed(2)}`); }
+    s += `<path class="bcurve" d="M${bp.join(" L")}"/>`;
+    const ks = cltCache.ks.filter(([, d]) => d > 0);
+    if (ks.length) {
+      s += `<path class="ksline" d="M${ks.map(([m, d]) => `${sx(m).toFixed(2)} ${sy(d).toFixed(2)}`).join(" L")}"/>`;
+      ks.forEach(([m, d]) => { s += `<circle class="ksdot" cx="${sx(m).toFixed(2)}" cy="${sy(d).toFixed(2)}" r="2.2"/>`; });
+    }
+    s += `</g>`;
+    const cx = sx(nn);
+    s += `<line class="marker" x1="${cx}" x2="${cx}" y1="${g.m.t}" y2="${sy0}"/>`;
+    s += `<circle class="mdot-b" cx="${cx}" cy="${sy(BE_C * rho / Math.sqrt(nn))}" r="5"/>`;
+    if (best.d > 0) s += `<circle class="hdot" cx="${cx}" cy="${sy(best.d)}" r="5"/>`;
+    if (model.key === "normal") s += `<text class="empty" x="${g.m.l + g.iw / 2}" y="${g.m.t + g.ih - 14}" text-anchor="middle">The gap is exactly 0 for every n, so there is no blue curve.</text>`;
+    s += `</svg>`;
+    host.innerHTML = s;
+  }
+  bindPair("cltN", v => { state.clt.n = clamp(Math.round(v), 1, CLT_NMAX); save(); redrawCharts(); });
+  $("cltSim1").addEventListener("click", () => {
+    if (!(model.sd > 0)) return;
+    const nn = state.clt.n, mS = nn * model.mean, sS = Math.sqrt(nn) * model.sd;
+    for (let i = 0; i < 1000; i++) { let t = 0; for (let j = 0; j < nn; j++) t += model.sample(); cltSim.z.push((t - mS) / sS); }
+    drawClt();
+  });
+  $("cltSimClear").addEventListener("click", () => { cltSim.z = []; drawClt(); });
+
+  // =================== POISSON PROCESS ===================
+  const PP_M = 400;
+  const pp = { paths: [], sig: "", frame: null };
+  function ppSimulate() {
+    const { lam: L, T } = state.pp;
+    pp.paths = [];
+    for (let m = 0; m < PP_M; m++) {
+      const arr = []; let t = 0;
+      // Keep going past T (and to at least 10 arrivals) so no gap is cut off by the horizon.
+      for (;;) { t += -Math.log(1 - Math.random()) / L; arr.push(t); if ((t > T && arr.length >= 10) || arr.length > 5000) break; }
+      pp.paths.push(arr);
+    }
+    pp.sig = `${L}|${T}`;
+  }
+  const poisPmf = (L, j) => Math.exp(-L + j * Math.log(L) - lf(j));
+  const poisMax = L => Math.max(poisPmf(L, Math.floor(L)), poisPmf(L, Math.max(0, Math.floor(L) - 1)));
+  function ppFit() {
+    const { lam: L, T, w } = state.pp, LT = L * T, Lw = L * w;
+    pp.frame = { ymax: Math.ceil(LT + 3 * Math.sqrt(LT) + 2), gmax: niceTop(5 / L), gy: niceTop(L), cmax: Math.ceil(Lw + 4 * Math.sqrt(Lw) + 3), cy: niceTop(poisMax(Lw), 1) };
+  }
+  function ppOff() {
+    const { lam: L, T, w } = state.pp, f = pp.frame, LT = L * T, Lw = L * w;
+    return LT + 2 * Math.sqrt(LT) > f.ymax || 4 / L > f.gmax * 1.001 || L > f.gy * 1.001 || Lw + 3 * Math.sqrt(Lw) > f.cmax || poisMax(Lw) > f.cy * 1.001;
+  }
+  function ppHist(id, vals, xmax, ymax, L, label) {
+    const host = $(id), g = geomFor(host, 210, 230, { l: 46, r: 12, t: 12, b: 34 });
+    const sx = t => g.m.l + t / xmax * g.iw, sy = y => g.m.t + g.ih - clamp(y, 0, ymax * 1.2) / ymax * g.ih, sy0 = sy(0);
+    const NB = 30, bw = xmax / NB, cnt = new Float64Array(NB);
+    vals.forEach(v => { const b = Math.floor(v / bw); if (b >= 0 && b < NB) cnt[b]++; });
+    let s = svgOpen(id, g, label);
+    s += yGrid(g, sy, ymax);
+    s += `<g clip-path="url(#clip-${id})">`;
+    for (let b = 0; b < NB; b++) {
+      if (!cnt[b]) continue;
+      const h = cnt[b] / (vals.length * bw);
+      s += `<rect class="sbar" x="${sx(b * bw).toFixed(2)}" y="${sy(h).toFixed(2)}" width="${Math.max(0.5, sx(bw) - sx(0) - 1).toFixed(2)}" height="${(sy0 - sy(h)).toFixed(2)}"/>`;
+    }
+    const pts = [];
+    for (let i = 0; i <= 200; i++) { const t = xmax * i / 200; pts.push(`${sx(t).toFixed(2)} ${sy(L * Math.exp(-L * t)).toFixed(2)}`); }
+    s += `<path class="phi" d="M${pts.join(" L")}"/></g>`;
+    s += xAxisSvg(g, sx, sy0, 0, xmax, false, "time");
+    s += `</svg>`;
+    host.innerHTML = s;
+  }
+  function drawPP() {
+    const P = state.pp;
+    if (pp.sig !== `${P.lam}|${P.T}`) ppSimulate();
+    if (!pp.frame) ppFit();
+    const f = pp.frame, L = P.lam, a = P.s, b = P.s + P.w;
+    const gaps = [], waits = [], covering = [], counts = [];
+    pp.paths.forEach(arr => {
+      let prev = 0, c = 0, before = 0, next = null;
+      arr.forEach((t, i) => { if (i < 10) gaps.push(t - (i ? arr[i - 1] : 0)); });
+      for (const t of arr) {
+        if (t > a && t <= b) c++;
+        if (t <= a) before = t; else if (next === null) next = t;
+      }
+      counts.push(c);
+      if (next !== null) { waits.push(next - a); covering.push(next - before); }
+    });
+    const mean = v => v.reduce((x, y) => x + y, 0) / Math.max(1, v.length);
+    const mc = mean(counts), vc = counts.reduce((x, y) => x + (y - mc) ** 2, 0) / Math.max(1, counts.length - 1);
+    const Lw = L * P.w;
+    $("ppStats").innerHTML = `
+      <div><dt>Mean gap</dt><dd>${fmt(mean(gaps), 3)}</dd><dd class="cond" style="font-size:12px">1/${I("λ")} = ${fmt(1 / L, 3)}</dd></div>
+      <div><dt>Mean count in window</dt><dd>${fmt(mc, 3)}</dd><dd class="cond" style="font-size:12px">${I("λw")} = ${fmt(Lw, 3)}</dd></div>
+      <div><dt>Variance of count</dt><dd>${fmt(vc, 3)}</dd><dd class="cond" style="font-size:12px">${I("λw")} = ${fmt(Lw, 3)}</dd></div>
+      <div><dt>Mean wait after ${I("s")}</dt><dd>${waits.length ? fmt(mean(waits), 3) : "—"}</dd><dd class="cond" style="font-size:12px">1/${I("λ")} = ${fmt(1 / L, 3)}</dd></div>
+      <div><dt>Mean gap containing ${I("s")}</dt><dd>${covering.length ? fmt(mean(covering), 3) : "—"}</dd><dd class="cond" style="font-size:12px">≈ 2/${I("λ")} = ${fmt(2 / L, 3)}</dd></div>`;
+    const off = ppOff();
+    const zf = document.querySelector(".zoom.pp");
+    zf.querySelector(".fit").classList.toggle("attn", off);
+    zf.querySelector(".offnote").hidden = !off;
+
+    // sample paths
+    const host = $("ppPaths"), g = geomFor(host, 250, 300, { l: 44, r: 14, t: 24, b: 34 });
+    const sx = t => g.m.l + t / P.T * g.iw, sy = y => g.m.t + g.ih - Math.min(y, f.ymax * 1.1) / f.ymax * g.ih, sy0 = sy(0);
+    let s = svgOpen("ppPaths", g, "Simulated sample paths of the counting process");
+    const yt = xTicks(0, f.ymax, g.ih, true);
+    yt.forEach(y => { s += `<line class="grid" x1="${g.m.l}" x2="${g.W - g.m.r}" y1="${sy(y)}" y2="${sy(y)}"/><g class="tick"><text x="${g.m.l - 8}" y="${sy(y) + 4}" text-anchor="end">${y}</text></g>`; });
+    s += `<rect class="winband" x="${sx(a)}" y="${g.m.t}" width="${Math.max(0, sx(Math.min(b, P.T)) - sx(a))}" height="${g.ih}"/>`;
+    s += `<g clip-path="url(#clip-ppPaths)">`;
+    const stepPath = all => { const arr = all.filter(t => t <= P.T); let d = `M${sx(0)} ${sy0}`; arr.forEach((t, i) => { d += ` H${sx(t).toFixed(2)} V${sy(i + 1).toFixed(2)}`; }); return d + ` H${sx(P.T)}`; };
+    for (let m = 1; m <= 10 && m < pp.paths.length; m++) s += `<path class="pathfaint" d="${stepPath(pp.paths[m])}"/>`;
+    s += `<line class="meanline" x1="${sx(0)}" y1="${sy0}" x2="${sx(P.T)}" y2="${sy(L * P.T)}"/>`;
+    const main = (pp.paths[0] || []).filter(t => t <= P.T);
+    s += `<path class="pathmain" d="${stepPath(main)}"/>`;
+    main.forEach(t => { s += `<line class="rug" x1="${sx(t).toFixed(2)}" x2="${sx(t).toFixed(2)}" y1="${sy0}" y2="${sy0 - 9}"/>`; });
+    s += `</g>`;
+    const k0 = main.filter(t => t > a && t <= b).length;
+    const [lx, an] = labelX(g, sx((a + Math.min(b, P.T)) / 2), 60);
+    s += `<text class="evnum" x="${lx}" y="${g.m.t - 8}" text-anchor="${an}">blue path: ${k0} in window</text>`;
+    s += xAxisSvg(g, sx, sy0, 0, P.T, false, "t");
+    s += `</svg>`;
+    host.innerHTML = s;
+
+    ppHist("ppGaps", gaps, f.gmax, f.gy, L, "Histogram of gaps between arrivals with the exponential density");
+    ppHist("ppWait", waits, f.gmax, f.gy, L, "Histogram of waits from s to the next arrival with the exponential density");
+
+    // window counts
+    const hc = $("ppCounts"), gc = geomFor(hc, 210, 230, { l: 46, r: 12, t: 12, b: 34 });
+    const x0 = -0.7, x1 = f.cmax + 0.7;
+    const cx = t => gc.m.l + (t - x0) / (x1 - x0) * gc.iw, cyF = y => gc.m.t + gc.ih - clamp(y, 0, f.cy * 1.2) / f.cy * gc.ih, cy0 = cyF(0);
+    const freq = new Map();
+    counts.forEach(c => freq.set(c, (freq.get(c) || 0) + 1));
+    let sc = svgOpen("ppCounts", gc, "Share of paths with each number of arrivals in the window, with the Poisson PMF");
+    sc += yGrid(gc, cyF, f.cy);
+    sc += `<g clip-path="url(#clip-ppCounts)">`;
+    const unit = gc.iw / (x1 - x0), bwp = Math.max(2, Math.min(unit * 0.72, 40));
+    let truth = "";
+    for (let j = 0; j <= f.cmax; j++) {
+      const r = (freq.get(j) || 0) / counts.length;
+      if (r > 0) sc += `<rect class="sbar" x="${(cx(j) - bwp / 2).toFixed(2)}" y="${cyF(r).toFixed(2)}" width="${bwp.toFixed(2)}" height="${(cy0 - cyF(r)).toFixed(2)}"/>`;
+      truth += `M${(cx(j) - bwp / 2).toFixed(2)} ${cyF(poisPmf(Lw, j)).toFixed(2)} H${(cx(j) + bwp / 2).toFixed(2)} `;
+    }
+    sc += `<path class="truth" d="${truth}"/></g>`;
+    sc += xAxisSvg(gc, cx, cy0, 0, f.cmax, true, "count");
+    sc += `</svg>`;
+    hc.innerHTML = sc;
+  }
+  bindPair("ppL", v => { state.pp.lam = clamp(roundTo(v, 0.1), 0.2, 5); save(); redrawCharts(); });
+  bindPair("ppT", v => {
+    const P = state.pp; P.T = clamp(Math.round(v), 2, 40);
+    if (P.w > P.T) P.w = P.T;
+    if (P.s + P.w > P.T) P.s = +(P.T - P.w).toFixed(4);
+    save(); redrawCharts();
+  });
+  bindPair("ppS", v => {
+    const P = state.pp; P.s = clamp(roundTo(v, 0.1), 0, P.T - 0.1);
+    if (P.s + P.w > P.T) P.w = +(P.T - P.s).toFixed(4);
+    save(); redrawCharts();
+  });
+  bindPair("ppW", v => {
+    const P = state.pp; P.w = clamp(roundTo(v, 0.1), 0.1, P.T);
+    if (P.s + P.w > P.T) P.s = +(P.T - P.w).toFixed(4);
+    save(); redrawCharts();
+  });
+  $("ppNew").addEventListener("click", () => { ppSimulate(); drawPP(); });
+  document.querySelector("[data-pz=fit]").addEventListener("click", () => { ppFit(); drawPP(); });
+
+  // ---------- redraw ----------
+  function redrawCharts() {
+    if (!model || !view) return;
+    syncViewControls();
+    if (state.tab === "explore") drawExplore();
+    else if (state.tab === "bounds") renderBounds();
+    else if (state.tab === "sim") drawSim();
+    else if (state.tab === "clt") drawClt();
+    else drawPP();
+    updateZoomUI();
+  }
+
+  bindChart("exTop", { pan: true, hover: xd => exHover(xd, "top"), leave: () => exHover(null) });
+  bindChart("exCdf", { pan: true, hover: xd => exHover(xd, "cdf"), leave: () => exHover(null) });
+  bindChart("memChart", { pan: true });
+  bindChart("bdTop", { pan: true });
+  bindChart("bdCurve", { drag: setBoundValue });
+  bindChart("simHist", { pan: true });
+
+  // ---------- init ----------
+  $("tMean").checked = state.showMean;
+  $("tSD").checked = state.showSD;
+  $("tInt").checked = state.interval.on;
+  $("bdLog").checked = state.bounds.logy;
+  buildDistButtons();
+  buildParams();
+  computeModel();
+  resetPerDist();
+  renderText();
+  view = fitView();
+  selectTab(state.tab);
+
+  let rt;
+  const ro = new ResizeObserver(() => { clearTimeout(rt); rt = setTimeout(redrawCharts, 60); });
+  ro.observe(document.querySelector(".charts"));
+})();
+</script>
+</body>
+</html>
